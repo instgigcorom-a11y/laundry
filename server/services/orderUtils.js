@@ -10,6 +10,6 @@ function sanitiseInvoice(inv, fallbackLines) {
 }
 function orderToClient(order) {
   const o = typeof order.toObject === "function" ? order.toObject() : order;
-  return { id:o.id, token:o.token, createdAt:o.createdAtMs, items:o.items||[], total:o.total||0, mode:o.mode||"pickup", dateLabel:o.dateLabel||"", slot:o.slot||"", readyBy:o.readyBy||"", addrText:o.addrText||"", paidVia:o.paidVia||"", status:Number(o.status)||0, invoice:o.invoice||{} };
+  return { id:o.id, token:o.token, createdAt:o.createdAtMs, items:o.items||[], total:o.total||0, mode:o.mode||"pickup", dateLabel:o.dateLabel||"", slot:o.slot||"", readyBy:o.readyBy||"", addrText:o.addrText||"", deliveryAddress:o.deliveryAddress||{}, paidVia:o.paidVia||"", paymentStatus:o.paymentStatus||"pending", status:o.status||"pending", invoice:o.invoice||{} };
 }
 module.exports = { clampNumber, sanitiseLine, sanitiseInvoice, orderToClient };

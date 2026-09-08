@@ -1,9 +1,11 @@
 "use strict";
 
 const User = require("../models/User");
-const Otp = require("../models/Otp");
 const Order = require("../models/Order");
 const Shop = require("../models/Shop");
+const Customer = require("../models/Customer");
+const Item = require("../models/Item");
+const AdminInvoice = require("../models/AdminInvoice");
 
 async function listIndexesSafe(collection) {
   try {
@@ -54,9 +56,11 @@ async function ensureDatabaseIndexes() {
   /* autoIndex is disabled at connect time so upgrades can safely migrate the
      user index first. Create/confirm the rest explicitly here. */
   await Promise.all([
-    Otp.createIndexes(),
     Order.createIndexes(),
-    Shop.createIndexes()
+    Shop.createIndexes(),
+    Customer.createIndexes(),
+    Item.createIndexes(),
+    AdminInvoice.createIndexes()
   ]);
 }
 

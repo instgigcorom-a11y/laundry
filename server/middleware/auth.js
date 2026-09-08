@@ -32,31 +32,17 @@ function publicUser(user) {
     name: user.name || "",
     email: user.email || "",
     phone: user.phone || "",
-    isAdmin: S.isAllowlisted(user)
+    role: user.role || "customer",
+    address: user.address || {}
   };
 }
 
 async function authenticate(req) {
-  const token = req.cookies && req.cookies[COOKIE_NAME];
+  const bearer = String(req.get("Authorization") || "").match(/^Bearer\s+(.+)$/i);
+  const token = (bearer && bearer[1]) || (req.cookies && req.cookies[COOKIE_NAME]);
   const claims = S.readSession(token);
   if (!claims) return null;
   return User.findById(claims.sub);
-}
-
-/*
- * A valid owner step-up requires all three things:
- *   1. the signed-in user is on ADMIN_EMAILS,
- *   2. the admin token belongs to that same user, and
- *   3. the token version matches the current version stored in MongoDB.
- */
-function adminTokenMatches(req, user, shop) {
-  if (!user || !shop || !S.isAllowlisted(user)) return false;
-
-  const claims = S.readAdmin(req.get("X-Admin-Token"));
-  if (!claims || claims.sub !== String(user._id)) return false;
-
-  const currentVersion = Number(shop.adminTokenVersion) || 1;
-  return Number.isInteger(currentVersion) && currentVersion >= 1 && claims.ver === currentVersion;
 }
 
 async function requireAuth(req, res, next) {
@@ -66,6 +52,7 @@ async function requireAuth(req, res, next) {
       return res.status(401).json({ error: "unauthenticated", message: "Sign in first." });
     }
     req.user = user;
+    req.shop = await Shop.findOne({ key: "main" });
     next();
   } catch (err) {
     next(err);
@@ -79,32 +66,16 @@ async function requireAdmin(req, res, next) {
       return res.status(401).json({ error: "unauthenticated", message: "Sign in first." });
     }
 
-    if (!S.isAllowlisted(user)) {
+    if (user.role !== "admin") {
       console.warn("[authz] admin route refused for %s", S.maskUserIdentifier(user));
       return res.status(403).json({
         error: "forbidden",
-        message: "This account does not have owner access."
+        message: "This account does not have admin access."
       });
     }
-
-    const shop = await Shop.findOne({ key: "main" });
-    if (!shop) {
-      return res.status(500).json({
-        error: "shop_missing",
-        message: "Shop configuration is missing."
-      });
-    }
-
-    if (!adminTokenMatches(req, user, shop)) {
-      return res.status(403).json({
-        error: "pin_required",
-        message: "Enter the shop PIN to continue."
-      });
-    }
-
     req.user = user;
-    req.shop = shop;
-    req.adminClaims = S.readAdmin(req.get("X-Admin-Token"));
+    req.shop = await Shop.findOne({ key: "main" });
+    if (!req.shop) throw new Error("Shop configuration is missing.");
     next();
   } catch (err) {
     next(err);
@@ -115,7 +86,6 @@ module.exports = {
   COOKIE_NAME,
   publicUser,
   authenticate,
-  adminTokenMatches,
   requireAuth,
   requireAdmin,
   setSessionCookie,

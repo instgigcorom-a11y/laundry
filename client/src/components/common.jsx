@@ -1,0 +1,3 @@
+export function Button({ children, loading, ...props }) { return <button className="button" disabled={loading || props.disabled} {...props}>{loading ? "Please wait..." : children}</button>; }
+export function Field({ label, error, ...props }) { return <label className="field"><span>{label}</span><input {...props} />{error && <small className="error">{error}</small>}</label>; }
+export function Status({ loading, error, empty, children }) { if (loading) return <p className="state">Loading...</p>; if (error) return <p className="state error">{error}</p>; if (empty) return <p className="state">{empty}</p>; return children; }

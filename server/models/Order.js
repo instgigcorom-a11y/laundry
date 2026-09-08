@@ -13,7 +13,9 @@ const OrderSchema = new mongoose.Schema({
   readyBy: { type: String, default: "" },
   addrText: { type: String, default: "" },
   paidVia: { type: String, default: "" },
-  status: { type: Number, default: 0 },
+  deliveryAddress: { type: mongoose.Schema.Types.Mixed, default: {} },
+  paymentStatus: { type: String, enum: ["pending", "verification_pending", "paid"], default: "pending", index: true },
+  status: { type: String, enum: ["pending", "processing", "completed", "cancelled"], default: "pending", index: true },
   invoice: { type: mongoose.Schema.Types.Mixed, default: {} }
 }, { timestamps: true });
 module.exports = mongoose.models.Order || mongoose.model("Order", OrderSchema);
