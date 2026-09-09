@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { shopService } from "../services/shopService";
 import { Button, Field, Status } from "../components/common";
 
@@ -7,19 +7,6 @@ const dateValue = (value) => new Date(value || Date.now()).toISOString().slice(0
 const blankCustomer = () => ({ name: "", phone: "", email: "", address: "", notes: "", active: true });
 const blankLine = () => ({ itemId: "", name: "", unit: "pcs", qty: 1, price: 0 });
 const blankInvoice = (settings = {}) => ({ customerId: "", invoiceDate: dateValue(), lines: [blankLine()], discount: 0, extraCharge: 0, gstPct: Number(settings.gstPct || 0), adjustment: 0, paid: false, note: settings.defaultInvoiceNotes || "", terms: settings.defaultInvoiceTerms || "" });
-
-function useEditorFocus(form) {
-  const editorRef = useRef(null);
-  useEffect(() => {
-    if (!form) return undefined;
-    const frame = window.requestAnimationFrame(() => {
-      editorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      editorRef.current?.querySelector("input, select, textarea")?.focus({ preventScroll: true });
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [form?.id || (form ? "new" : "")]);
-  return editorRef;
-}
 
 export function AdminDashboard() {
   const [stats, setStats] = useState(null); const [error, setError] = useState("");

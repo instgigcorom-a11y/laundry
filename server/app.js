@@ -19,27 +19,34 @@ const paymentsRoutes=require("./routes/payments");
 const app=express();
 const ready=(async()=>{await connectDB();await ensureDatabaseIndexes();await ensureShop();await ensureStarterServices();})();
 
+function normaliseOrigin(value){
+  try{return new URL(String(value||"").trim()).origin;}catch{return "";}
+}
+
 const ALLOWED_CORS_ORIGINS=new Set(
   String(process.env.CORS_ORIGINS||"")
     .split(",")
-    .map(v=>String(v||"").trim())
-    .filter(Boolean)
     .concat([
+      "https://pplwash.in",
+      "https://www.pplwash.in",
       "http://localhost:5500",
       "http://127.0.0.1:5500",
       "http://localhost:8080",
       "http://127.0.0.1:8080"
     ])
+    .map(normaliseOrigin)
+    .filter(Boolean)
 );
 
 function allowCors(req,res,next){
-  const origin=String(req.get("Origin")||"").trim();
+  const origin=normaliseOrigin(req.get("Origin"));
   if(origin&&ALLOWED_CORS_ORIGINS.has(origin)){
     res.set("Access-Control-Allow-Origin",origin);
     res.set("Vary","Origin");
     res.set("Access-Control-Allow-Credentials","true");
-    res.set("Access-Control-Allow-Headers","Accept, Content-Type, X-Admin-Token");
+    res.set("Access-Control-Allow-Headers","Accept, Authorization, Content-Type, X-Admin-Token");
     res.set("Access-Control-Allow-Methods","GET,POST,PUT,PATCH,DELETE,OPTIONS");
+    res.set("Access-Control-Max-Age","86400");
   }
   if(req.method==="OPTIONS") return res.sendStatus(204);
   next();

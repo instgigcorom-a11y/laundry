@@ -4,13 +4,22 @@ import { CartContext } from "../context/CartContext";
 import { AuthContext } from "../context/AuthContext";
 import { BookingContext } from "../context/BookingContext";
 import { shopService } from "../services/shopService";
-import { Button, Status } from "../components/common";
+import { Button, Field, Status } from "../components/common";
 
 const rupees = (value) => `Rs ${Number(value || 0).toFixed(0)}`;
 const PICKUP_FEE = 30;
 const DROP_DISCOUNT = 20;
 const READY_DAYS = 3;
 const timeSlots = ["08:00 - 10:00", "10:00 - 12:00", "12:00 - 14:00", "14:00 - 16:00", "16:00 - 18:00", "18:00 - 20:00"];
+const pause = (milliseconds) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+async function loadPublicProducts() {
+  let lastError;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try { return await shopService.products(); }
+    catch (error) { lastError = error; if (attempt < 2) await pause(800 * (attempt + 1)); }
+  }
+  throw lastError;
+}
 function savedAddressKey(user) { return user?.id ? `ppl_addresses:${user.id}` : null; }
 function formatDate(date) { return date.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" }); }
 function daysFromToday(count = 6) { return Array.from({ length: count }, (_, index) => { const date = new Date(); date.setHours(12, 0, 0, 0); date.setDate(date.getDate() + index); return date; }); }
@@ -26,9 +35,9 @@ function BookingTotal({ itemsTotal, mode }) { const value = totals(itemsTotal, m
 
 export function HomePage() {
   const { items } = useContext(CartContext); const { user } = useContext(AuthContext);
-  const [services, setServices] = useState([]);
-  useEffect(() => { let live = true; shopService.products().then(({ products }) => { if (live) setServices((products || []).slice(0, 4)); }).catch(() => { if (live) setServices([]); }); return () => { live = false; }; }, []);
-  return <section className="home"><div className="home-welcome"><p>Hello, {user?.name?.split(" ")[0] || "there"}</p>{user ? <Link to="/cart">Your bag {items.length ? `(${items.length})` : "is empty"}</Link> : <Link to="/login">Log in to place an order</Link>}</div><div className="home-title"><p className="eyebrow">Prem Power Laundry</p><h1>Fresh clothes, right at your door.</h1><p>Trusted laundry care from Gurlal Bazar, Amritsar.</p></div><div className="quick-grid">{services.map((service) => <Link key={service.id} to="/products" className="quick-service"><span>{service.name}</span><strong>{rupees(service.price)}{service.from && "+"}<small>/{service.unit}</small></strong></Link>)}</div>{!services.length && <p className="state">Loading today&apos;s services...</p>}<Link className="rate-list-link" to="/products"><span>Rate list</span><b>See full rate list &gt;</b></Link><article className="shop-card"><div><span className="open-pill">Open today</span><h2>Prem Power Laundry</h2><p>House 1328C, Gali No. 4, New Partap Nagar<br />Gurlal Bazar, Amritsar, Punjab 143001</p><strong>8:00 am - 8:30 pm</strong></div><a href="https://www.google.com/maps/search/?api=1&query=New%20Partap%20Nagar%20Gali%20No%204%20Gurlal%20Bazar%20Amritsar%20143001" target="_blank" rel="noreferrer">Directions</a></article><div className="how"><p className="eyebrow">How it works</p><div className="how-grid"><article><b>1</b><h2>Pick clothes and rates</h2><p>Select every garment and service.</p></article><article><b>2</b><h2>We collect your bag</h2><p>Confirm your pickup booking.</p></article><article><b>3</b><h2>Fresh clothes return</h2><p>Track progress from Orders.</p></article><article><b>4</b><h2>Pay cash or UPI</h2><p>Use the payment QR after booking.</p></article></div></div></section>;
+  const [services, setServices] = useState([]); const [loading, setLoading] = useState(true); const [error, setError] = useState(""); const [reloadKey, setReloadKey] = useState(0);
+  useEffect(() => { let live = true; setLoading(true); setError(""); loadPublicProducts().then(({ products }) => { if (live) setServices((products || []).slice(0, 4)); }).catch(() => { if (live) setError("We could not load today's services."); }).finally(() => { if (live) setLoading(false); }); return () => { live = false; }; }, [reloadKey]);
+  return <section className="home"><div className="home-welcome"><p>Hello, {user?.name?.split(" ")[0] || "there"}</p>{user ? <Link to="/cart">Your bag {items.length ? `(${items.length})` : "is empty"}</Link> : <Link to="/login">Log in to place an order</Link>}</div><div className="home-title"><p className="eyebrow">Prem Power Laundry</p><h1>Fresh clothes, right at your door.</h1><p>Trusted laundry care from Gurlal Bazar, Amritsar.</p></div><div className="quick-grid">{services.map((service) => <Link key={service.id} to="/products" className="quick-service"><span>{service.name}</span><strong>{rupees(service.price)}{service.from && "+"}<small>/{service.unit}</small></strong></Link>)}</div>{loading && <p className="state">Loading today&apos;s services...</p>}{error && <p className="state error">{error} <button className="text-button" onClick={() => setReloadKey((value) => value + 1)}>Try again</button></p>}{!loading && !error && !services.length && <p className="state">No services are currently available.</p>}<Link className="rate-list-link" to="/products"><span>Rate list</span><b>See full rate list &gt;</b></Link><article className="shop-card"><div><span className="open-pill">Open today</span><h2>Prem Power Laundry</h2><p>House 1328C, Gali No. 4, New Partap Nagar<br />Gurlal Bazar, Amritsar, Punjab 143001</p><strong>8:00 am - 8:30 pm</strong></div><a href="https://www.google.com/maps/search/?api=1&query=New%20Partap%20Nagar%20Gali%20No%204%20Gurlal%20Bazar%20Amritsar%20143001" target="_blank" rel="noreferrer">Directions</a></article><div className="how"><p className="eyebrow">How it works</p><div className="how-grid"><article><b>1</b><h2>Pick clothes and rates</h2><p>Select every garment and service.</p></article><article><b>2</b><h2>We collect your bag</h2><p>Confirm your pickup booking.</p></article><article><b>3</b><h2>Fresh clothes return</h2><p>Track progress from Orders.</p></article><article><b>4</b><h2>Pay cash or UPI</h2><p>Use the payment QR after booking.</p></article></div></div></section>;
 }
 
 export function ProductsPage() {
@@ -37,8 +46,8 @@ export function ProductsPage() {
   const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [category, setCategory] = useState("");
-  const [notice, setNotice] = useState("Shop rate list. A + means the price starts there and depends on the work.");
-  useEffect(() => { let live = true; shopService.products().then(({ products: next }) => { if (!live) return; setProducts(next || []); setCategory((current) => current || next?.[0]?.category || ""); setNotice("Shop rate list. A + means the price starts there and depends on the work."); }).catch(() => { if (live) setNotice("Services are temporarily unavailable. Please try again shortly."); }); return () => { live = false; }; }, []);
+  const [notice, setNotice] = useState("Shop rate list. A + means the price starts there and depends on the work."); const [loading, setLoading] = useState(true); const [loadError, setLoadError] = useState(""); const [reloadKey, setReloadKey] = useState(0);
+  useEffect(() => { let live = true; setLoading(true); setLoadError(""); loadPublicProducts().then(({ products: next }) => { if (!live) return; setProducts(next || []); setCategory((current) => current || next?.[0]?.category || ""); setNotice("Shop rate list. A + means the price starts there and depends on the work."); }).catch(() => { if (live) { setLoadError("Services are temporarily unavailable. Please try again shortly."); setNotice("We are reconnecting to the laundry catalogue."); } }).finally(() => { if (live) setLoading(false); }); return () => { live = false; }; }, [reloadKey]);
   const categories = [...new Map(products.map((product) => [product.category || "everyday", { id: product.category || "everyday", label: product.categoryLabel || "Laundry services", days: product.readyDays || READY_DAYS }])).values()];
   const activeCategory = categories.some((item) => item.id === category) ? category : categories[0]?.id;
   const selected = products.filter((product) => product.category === activeCategory);
@@ -58,12 +67,26 @@ export function ProductsPage() {
           {cartItem ? <div className="service-stepper" aria-label={`${product.name} quantity`}><button aria-label={`Remove one ${product.name}`} onClick={() => change(product.id, cartItem.quantity - 1)}>-</button><span>{cartItem.quantity}</span><button aria-label={`Add one ${product.name}`} onClick={() => add(product)}>+</button></div> : <button className="add-service" onClick={() => user ? add(product) : navigate("/login", { state: { from: "/products" } })}>Add</button>}
         </div>;
       })}</div>
-    </article>)}{!products.length && <p className="state">No active services are available right now.</p>}</div>
+    </article>)}{loading && <p className="state">Loading services...</p>}{loadError && <p className="state error">{loadError} <button className="text-button" onClick={() => setReloadKey((value) => value + 1)}>Try again</button></p>}{!loading && !loadError && !products.length && <p className="state">No active services are available right now.</p>}</div>
     <Link className="floating-cart" to="/cart">View bag <span>{itemCount ? `${itemCount} item${itemCount > 1 ? "s" : ""}` : "empty"}</span></Link>
   </section>;
 }
 
-export function AccountPage() { const { user, logout } = useContext(AuthContext); const navigate = useNavigate(); async function leave() { await logout(); navigate("/login"); } return <section className="account-page"><p className="eyebrow">Account</p><h1>{user?.name}</h1><article className="card"><strong>{user?.phone}</strong><p>{user?.address?.line1 || "Add your delivery address during registration."}</p><p>{user?.address?.city} {user?.address?.pincode}</p></article><Link className="button" to="/orders">View your orders</Link><Button onClick={leave}>Sign out</Button></section>; }
+export function AccountPage() {
+  const { user, changePassword, logout } = useContext(AuthContext); const navigate = useNavigate();
+  const [form, setForm] = useState({ currentPassword: "", password: "", confirmPassword: "" }); const [error, setError] = useState(""); const [message, setMessage] = useState(""); const [saving, setSaving] = useState(false);
+  async function leave() { await logout(); navigate("/login"); }
+  async function savePassword(event) {
+    event.preventDefault();
+    if (!form.currentPassword) return setError("Enter your current password.");
+    if (form.password.length < 8) return setError("New password must be at least 8 characters.");
+    if (form.password !== form.confirmPassword) return setError("New passwords do not match.");
+    setSaving(true); setError(""); setMessage("");
+    try { await changePassword(form.currentPassword, form.password); setForm({ currentPassword: "", password: "", confirmPassword: "" }); setMessage("Password changed successfully."); }
+    catch (err) { setError(err.message); } finally { setSaving(false); }
+  }
+  return <section className="account-page"><p className="eyebrow">Account</p><h1>{user?.name}</h1><article className="card"><strong>{user?.phone}</strong><p>{user?.address?.line1 || "Add your delivery address during registration."}</p><p>{user?.address?.city} {user?.address?.pincode}</p></article><section className="card account-password"><h2>Change password</h2><p>Use your current password to choose a new one.</p><form onSubmit={savePassword} noValidate><Field label="Current password" type="password" autoComplete="current-password" value={form.currentPassword} onChange={(event) => setForm({ ...form, currentPassword: event.target.value })} required /><Field label="New password" type="password" autoComplete="new-password" minLength="8" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} required /><Field label="Confirm new password" type="password" autoComplete="new-password" minLength="8" value={form.confirmPassword} onChange={(event) => setForm({ ...form, confirmPassword: event.target.value })} required />{error && <p className="error" role="alert">{error}</p>}{message && <p className="success" role="status">{message}</p>}<Button loading={saving}>Update password</Button></form></section><Link className="button" to="/orders">View your orders</Link><Button onClick={leave}>Sign out</Button></section>;
+}
 
 export function CartPage() {
   const { items, change, total } = useContext(CartContext); const { booking, update } = useContext(BookingContext); const { user } = useContext(AuthContext); const navigate = useNavigate();

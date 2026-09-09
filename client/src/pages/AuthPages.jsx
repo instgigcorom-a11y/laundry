@@ -37,7 +37,28 @@ export function LoginPage() {
     catch (err) { setError(err.message); } finally { setLoading(false); }
   }
   if (sessionLoading || user) return <p className="state">Preparing your account...</p>;
-  return <AuthShell title="Welcome back"><form onSubmit={submit} noValidate><Field label="Email or mobile number" autoComplete="username" value={form.identifier} onChange={(event) => setForm({ ...form, identifier: event.target.value })} required /><Field label="Password" type="password" autoComplete="current-password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} required />{error && <p className="error" role="alert">{error}</p>}<Button loading={loading}>Log in</Button></form><p>New customer? <Link to="/register" state={{ from: location.state?.from }}>Create an account</Link></p></AuthShell>;
+  return <AuthShell title="Welcome back"><form onSubmit={submit} noValidate><Field label="Email or mobile number" autoComplete="username" value={form.identifier} onChange={(event) => setForm({ ...form, identifier: event.target.value })} required /><Field label="Password" type="password" autoComplete="current-password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} required /><p className="auth-helper"><Link to="/forgot-password">Forgot password?</Link></p>{error && <p className="error" role="alert">{error}</p>}<Button loading={loading}>Log in</Button></form><p>New customer? <Link to="/register" state={{ from: location.state?.from }}>Create an account</Link></p></AuthShell>;
+}
+
+export function ForgotPasswordPage() {
+  const { forgotPassword } = useContext(AuthContext);
+  const { user, sessionLoading, location } = useSignedInRedirect();
+  const navigate = useNavigate();
+  const [form, setForm] = useState({ email: "", mobileNumber: "", password: "", confirmPassword: "" });
+  const [error, setError] = useState(""); const [loading, setLoading] = useState(false);
+  const set = (key, value) => setForm({ ...form, [key]: value });
+  async function submit(event) {
+    event.preventDefault();
+    const mobileNumber = form.mobileNumber.replace(/\D/g, "").replace(/^91/, "");
+    if (!form.email.trim() || !/^[6-9]\d{9}$/.test(mobileNumber)) return setError("Enter your account email and registered 10-digit mobile number.");
+    if (form.password.length < 8) return setError("New password must be at least 8 characters.");
+    if (form.password !== form.confirmPassword) return setError("Passwords do not match.");
+    setLoading(true); setError("");
+    try { const signedIn = await forgotPassword({ email: form.email.trim(), mobileNumber, password: form.password }); navigate(nextPath(signedIn, location), { replace: true }); }
+    catch (err) { setError(err.message); } finally { setLoading(false); }
+  }
+  if (sessionLoading || user) return <p className="state">Preparing your account...</p>;
+  return <AuthShell title="Forgot your password?"><p className="auth-note">Confirm your saved email and registered mobile number, then choose a new password.</p><form className="auth-register-form" onSubmit={submit} noValidate><Field label="Account email" type="email" autoComplete="email" value={form.email} onChange={(event) => set("email", event.target.value)} required /><Field label="Registered mobile number" type="tel" inputMode="numeric" autoComplete="tel" value={form.mobileNumber} onChange={(event) => set("mobileNumber", event.target.value.replace(/\D/g, "").slice(0, 12))} required /><Field label="New password" type="password" autoComplete="new-password" minLength="8" value={form.password} onChange={(event) => set("password", event.target.value)} required /><Field label="Confirm new password" type="password" autoComplete="new-password" minLength="8" value={form.confirmPassword} onChange={(event) => set("confirmPassword", event.target.value)} required />{error && <p className="error" role="alert">{error}</p>}<Button loading={loading}>Verify and update password</Button></form><p>Remembered it? <Link to="/login">Log in</Link></p></AuthShell>;
 }
 
 export function RegisterPage() {

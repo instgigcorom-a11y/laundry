@@ -47,6 +47,41 @@ router.post("/login", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+router.post("/change-password", requireAuth, async (req, res, next) => {
+  try {
+    const currentPassword = String(req.body.currentPassword || "");
+    const password = String(req.body.password || "");
+    if (!currentPassword || password.length < 8) return res.status(400).json({ error: "bad_password", message: "Enter your current password and a new password of at least 8 characters." });
+
+    const user = await User.findById(req.user._id).select("+passwordHash");
+    if (!user || !S.checkPassword(currentPassword, user.passwordHash)) return res.status(401).json({ error: "bad_current_password", message: "Your current password is incorrect." });
+
+    user.passwordHash = S.hashPassword(password);
+    user.lastLoginAt = new Date();
+    await user.save();
+    setSessionCookie(res, user._id);
+    res.json({ user: publicUser(user), token: S.mintSession(user._id) });
+  } catch (err) { next(err); }
+});
+
+router.post("/forgot-password", async (req, res, next) => {
+  try {
+    const email = S.normaliseEmail(req.body.email);
+    const phone = S.normalisePhone(req.body.mobileNumber || req.body.phone);
+    const password = String(req.body.password || "");
+    if (!S.validEmail(email) || !S.validPhone(phone) || password.length < 8) return res.status(400).json({ error: "bad_recovery_details", message: "Enter your account email, registered 10-digit mobile number, and a new password of at least 8 characters." });
+
+    const user = await User.findOne({ email, phone }).select("+passwordHash");
+    if (!user) return res.status(401).json({ error: "recovery_not_verified", message: "We could not verify those account details. Check your email and registered mobile number." });
+
+    user.passwordHash = S.hashPassword(password);
+    user.lastLoginAt = new Date();
+    await user.save();
+    setSessionCookie(res, user._id);
+    res.json({ user: publicUser(user), token: S.mintSession(user._id) });
+  } catch (err) { next(err); }
+});
+
 router.get("/me", requireAuth, (req, res) => res.json({ user: publicUser(req.user) }));
 router.post("/logout", (req, res) => { clearSessionCookie(res); res.json({ ok: true }); });
 module.exports = router;
