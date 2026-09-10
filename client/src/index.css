@@ -158,10 +158,14 @@ header { min-height: 70px; padding: 0 6vw; display: flex; align-items: center; j
 @media (max-width: 720px) {
   main { padding-bottom: 6.4rem; }
   .mobile-nav { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .28rem; padding: .5rem max(.6rem, env(safe-area-inset-left)) calc(.55rem + env(safe-area-inset-bottom)) max(.6rem, env(safe-area-inset-right)); background: rgba(20, 54, 42, .98); border-top: 1px solid rgba(217, 240, 198, .16); box-shadow: 0 -10px 28px rgba(21, 43, 34, .2); }
-  .mobile-nav a { min-width: 0; min-height: 46px; display: grid; justify-items: center; align-content: center; gap: .18rem; border-radius: .75rem; color: #dcebd6; font: 800 .66rem "Archivo", "DM Sans", sans-serif; letter-spacing: .01em; }
+  .mobile-nav a, .mobile-nav button { min-width: 0; min-height: 46px; display: grid; justify-items: center; align-content: center; gap: .18rem; border: 0; border-radius: .75rem; background: transparent; color: #dcebd6; font: 800 .66rem "Archivo", "DM Sans", sans-serif; letter-spacing: .01em; cursor: pointer; }
   .mobile-nav a::before { display: none; }.mobile-nav-icon { width: 21px; height: 21px; display: grid; place-items: center; border-radius: .42rem; background: rgba(217, 240, 198, .14); color: #d9f0c6; font-size: .67rem; line-height: 1; }.mobile-nav-label { display: inline-flex; align-items: center; gap: .2rem; min-width: 0; }
-  .mobile-nav a.active { background: #fffdf9; color: #1b4033; }.mobile-nav a.active .mobile-nav-icon { background: #d75b36; color: #fff; }.mobile-bag-count { min-width: 14px; height: 14px; display: grid; place-items: center; border-radius: 50%; background: #d75b36; color: #fff; font: 800 .59rem "Archivo", sans-serif; font-style: normal; }.mobile-nav a.active .mobile-bag-count { background: #1e5b47; }
+  .mobile-nav a.active, .mobile-nav button.active { background: #fffdf9; color: #1b4033; }.mobile-nav a.active .mobile-nav-icon, .mobile-nav button.active .mobile-nav-icon { background: #d75b36; color: #fff; }.mobile-bag-count { min-width: 14px; height: 14px; display: grid; place-items: center; border-radius: 50%; background: #d75b36; color: #fff; font: 800 .59rem "Archivo", sans-serif; font-style: normal; }.mobile-nav a.active .mobile-bag-count { background: #1e5b47; }
   .floating-cart { bottom: calc(5.8rem + env(safe-area-inset-bottom)); }
+  .admin-mobile-menu { position: fixed; z-index: 21; right: max(.6rem, env(safe-area-inset-right)); bottom: calc(5.65rem + env(safe-area-inset-bottom)); display: grid; min-width: 184px; padding: .4rem; border: 1px solid #d8e6db; border-radius: .95rem; background: #fffdf9; box-shadow: 0 14px 32px rgba(21, 43, 34, .22); }
+  .admin-mobile-menu a, .admin-mobile-menu button { min-height: 42px; padding: .68rem .75rem; border: 0; border-radius: .65rem; background: transparent; color: #193f33; font: 800 .8rem "Archivo", "DM Sans", sans-serif; text-align: left; text-decoration: none; cursor: pointer; }
+  .admin-mobile-menu button { color: #a9432e; }
+  .admin-mobile-menu a:active, .admin-mobile-menu button:active { background: #edf4e9; }
 }
 
 /* Admin finance workspace: parties and invoices remain practical on every screen size. */
