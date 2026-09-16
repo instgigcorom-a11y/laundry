@@ -164,6 +164,7 @@ function adminInvoiceToClient(invoice) {
     subtotal: clampNumber(x.subtotal, 0, 1e9, 0),
     discount: clampNumber(x.discount, 0, 1e9, 0),
     extraCharge: clampNumber(x.extraCharge, 0, 1e9, 0),
+    extraChargeLabel: String(x.extraChargeLabel || "").trim().slice(0, 120),
     gstPct: clampNumber(x.gstPct, 0, 100, 0),
     gstAmount: clampNumber(x.gstAmount, 0, 1e9, 0),
     adjustment: clampNumber(x.adjustment, -1e9, 1e9, 0),

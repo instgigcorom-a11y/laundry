@@ -101,6 +101,13 @@ async function buildAdminInvoicePayload(input, currentInvoice, shopSettings) {
     gstPct: src.gstPct == null ? shopSettings.gstPct : src.gstPct,
     adjustment: src.adjustment
   });
+  const extraChargeLabel = String(src.extraChargeLabel ?? (current && current.extraChargeLabel) ?? "").trim().slice(0, 120);
+  if (totals.extraCharge > 0 && !extraChargeLabel) {
+    const err = new Error("Add a description for the extra charge.");
+    err.statusCode = 400;
+    err.clientError = "missing_extra_charge_description";
+    throw err;
+  }
 
   return {
     customerId,
@@ -110,6 +117,7 @@ async function buildAdminInvoicePayload(input, currentInvoice, shopSettings) {
     subtotal: totals.subtotal,
     discount: totals.discount,
     extraCharge: totals.extraCharge,
+    extraChargeLabel,
     gstPct: totals.gstPct,
     gstAmount: totals.gstAmount,
     adjustment: totals.adjustment,

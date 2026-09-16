@@ -32,6 +32,7 @@ const AdminInvoiceSchema = new mongoose.Schema({
   subtotal: { type: Number, default: 0 },
   discount: { type: Number, default: 0 },
   extraCharge: { type: Number, default: 0 },
+  extraChargeLabel: { type: String, trim: true, maxlength: 120, default: "" },
   gstPct: { type: Number, default: 0 },
   gstAmount: { type: Number, default: 0 },
   adjustment: { type: Number, default: 0 },

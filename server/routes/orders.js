@@ -76,6 +76,7 @@ async function createOrderInvoice(order, user, deliveryCharge, invoiceSettings) 
     id: makeId("inv"), number: "INV-" + String(sequence).padStart(5, "0"), sourceOrderId: order.id,
     customerId: customer.id, customer: customerSnapshot(customer), invoiceDate: order.createdAtMs,
     lines, ...totals, paid: order.paymentStatus === "paid",
+    extraChargeLabel: deliveryCharge > 0 ? "Pickup & delivery" : "",
     note: [String(invoiceSettings?.defaultInvoiceNotes || "").trim(), "Order #" + order.token].filter(Boolean).join(" | ").slice(0, 500),
     terms: String(invoiceSettings?.defaultInvoiceTerms || "").slice(0, 1000),
     createdBy: user._id, updatedBy: user._id

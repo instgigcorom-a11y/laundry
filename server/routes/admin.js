@@ -46,6 +46,7 @@ async function ensureOrderInvoice(order, actor, settings) {
   return AdminInvoice.create({
     id: makeId("inv"), number: "INV-" + String(invoiceSeq).padStart(5, "0"), sourceOrderId: order.id,
     customerId: customer.id, customer: customerSnapshot(customer), invoiceDate: order.createdAtMs || Date.now(), lines, ...totals,
+    extraChargeLabel: deliveryCharge > 0 ? "Pickup & delivery" : "",
     paid: order.paymentStatus === "paid", note: [String(settings.defaultInvoiceNotes || "").trim(), "Order #" + order.token].filter(Boolean).join(" | ").slice(0, 500),
     terms: String(settings.defaultInvoiceTerms || "").slice(0, 1000), createdBy: actor._id, updatedBy: actor._id
   });
