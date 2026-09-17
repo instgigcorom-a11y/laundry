@@ -1,6 +1,7 @@
 import { useContext, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
+import { showToast } from "../utils/toast";
 import { Button, Field } from "../components/common";
 
 function nextPath(user, location) {
@@ -33,7 +34,7 @@ export function LoginPage() {
     const identifier = form.identifier.trim();
     if (!identifier || !form.password) return setError("Enter your email/mobile number and password.");
     setLoading(true); setError("");
-    try { const signedIn = await login({ identifier, password: form.password }); navigate(nextPath(signedIn, location), { replace: true }); }
+    try { const signedIn = await login({ identifier, password: form.password }); showToast("Welcome back."); navigate(nextPath(signedIn, location), { replace: true }); }
     catch (err) { setError(err.message); } finally { setLoading(false); }
   }
   if (sessionLoading || user) return <p className="state">Preparing your account...</p>;
@@ -54,7 +55,7 @@ export function ForgotPasswordPage() {
     if (form.password.length < 8) return setError("New password must be at least 8 characters.");
     if (form.password !== form.confirmPassword) return setError("Passwords do not match.");
     setLoading(true); setError("");
-    try { const signedIn = await forgotPassword({ email: form.email.trim(), mobileNumber, password: form.password }); navigate(nextPath(signedIn, location), { replace: true }); }
+    try { const signedIn = await forgotPassword({ email: form.email.trim(), mobileNumber, password: form.password }); showToast("Password updated. You are signed in."); navigate(nextPath(signedIn, location), { replace: true }); }
     catch (err) { setError(err.message); } finally { setLoading(false); }
   }
   if (sessionLoading || user) return <p className="state">Preparing your account...</p>;
@@ -77,7 +78,7 @@ export function RegisterPage() {
     if (form.password !== form.confirmPassword) return setError("Passwords do not match.");
     if (!/^[6-9]\d{9}$/.test(mobileNumber.replace(/^91/, ""))) return setError("Enter a valid 10-digit Indian mobile number.");
     setLoading(true); setError("");
-    try { const signedIn = await register({ ...form, name: form.name.trim(), email: form.email.trim(), mobileNumber }); navigate(nextPath(signedIn, location), { replace: true }); }
+    try { const signedIn = await register({ ...form, name: form.name.trim(), email: form.email.trim(), mobileNumber }); showToast("Your account is ready."); navigate(nextPath(signedIn, location), { replace: true }); }
     catch (err) { setError(err.message); } finally { setLoading(false); }
   }
   if (sessionLoading || user) return <p className="state">Preparing your account...</p>;

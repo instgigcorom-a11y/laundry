@@ -5,7 +5,7 @@ import { BookingProvider } from "./context/BookingContext";
 import { Layout } from "./components/layout";
 import { ForgotPasswordPage, LoginPage, RegisterPage } from "./pages/AuthPages";
 import { AccountPage, HomePage, ProductsPage, CartPage, SchedulePage, AddressPage, AddressFormPage, PaymentMethodPage, ConfirmationPage, OrdersPage, PaymentPage } from "./pages/CustomerPages";
-import { AdminBillingSettings, AdminCustomers, AdminDashboard, AdminInvoices, AdminOrders, AdminUsers } from "./pages/AdminPages";
+import { AdminBillingSettings, AdminCustomers, AdminDashboard, AdminInvoicesV2 as AdminInvoices, AdminOrders, AdminUsers } from "./pages/AdminPages";
 import { AdminServices } from "./pages/AdminServices";
 function Guard({ admin = false, children }) { const { user, loading } = useContext(AuthContext); const location = useLocation(); if (loading) return <p className="state">Loading application...</p>; if (!user) return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />; if (admin && user.role !== "admin") return <Navigate to="/products" replace />; if (!admin && user.role === "admin") return <Navigate to="/admin" replace />; return <Layout>{children}</Layout>; }
 function PublicPage({ children }) { const { user } = useContext(AuthContext); if (user?.role === "admin") return <Navigate to="/admin" replace />; return <Layout>{children}</Layout>; }
