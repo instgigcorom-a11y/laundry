@@ -6,6 +6,7 @@ const Shop = require("../models/Shop");
 const Customer = require("../models/Customer");
 const Item = require("../models/Item");
 const AdminInvoice = require("../models/AdminInvoice");
+const PushSubscription = require("../models/PushSubscription");
 
 async function listIndexesSafe(collection) {
   try {
@@ -60,7 +61,8 @@ async function ensureDatabaseIndexes() {
     Shop.createIndexes(),
     Customer.createIndexes(),
     Item.createIndexes(),
-    AdminInvoice.createIndexes()
+    AdminInvoice.createIndexes(),
+    PushSubscription.createIndexes()
   ]);
 }
 

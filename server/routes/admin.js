@@ -6,6 +6,8 @@ const Item = require("../models/Item");
 const AdminInvoice = require("../models/AdminInvoice");
 const Customer = require("../models/Customer");
 const Shop = require("../models/Shop");
+const PushSubscription = require("../models/PushSubscription");
+const { pushConfig } = require("../services/pushNotifications");
 const { DEFAULT_SHOP } = require("../services/bootstrap");
 const { makeId, customerSnapshot, invoiceTotals, adminInvoiceToClient } = require("../services/adminUtils");
 const { requireAdmin, publicUser } = require("../middleware/auth");
@@ -71,6 +73,27 @@ router.get("/dashboard", requireAdmin, async (req, res, next) => {
       Order.aggregate([{ $match: { paymentStatus: "paid" } }, { $group: { _id: null, total: { $sum: "$total" } } }])
     ]);
     res.json({ stats: { totalCustomers, totalOrders, pendingOrders, completedOrders, totalRevenue: revenue[0] ? revenue[0].total : 0 } });
+  } catch (err) { next(err); }
+});
+router.get("/push-config", requireAdmin, async (req, res, next) => {
+  try { res.json(pushConfig()); } catch (err) { next(err); }
+});
+router.post("/push-subscriptions", requireAdmin, async (req, res, next) => {
+  try {
+    const subscription = req.body && req.body.subscription || {};
+    const endpoint = String(subscription.endpoint || "").trim();
+    const p256dh = String(subscription.keys && subscription.keys.p256dh || "").trim();
+    const auth = String(subscription.keys && subscription.keys.auth || "").trim();
+    if (!/^https:\/\//.test(endpoint) || !p256dh || !auth) return res.status(400).json({ error: "bad_subscription", message: "This browser push subscription is invalid." });
+    await PushSubscription.findOneAndUpdate({ endpoint }, { user: req.user._id, endpoint, keys: { p256dh, auth } }, { upsert: true, new: true, setDefaultsOnInsert: true });
+    res.status(201).json({ saved: true });
+  } catch (err) { next(err); }
+});
+router.delete("/push-subscriptions", requireAdmin, async (req, res, next) => {
+  try {
+    const endpoint = String(req.body && req.body.endpoint || "").trim();
+    if (endpoint) await PushSubscription.deleteOne({ endpoint, user: req.user._id });
+    res.json({ removed: true });
   } catch (err) { next(err); }
 });
 router.get("/users", requireAdmin, async (req, res, next) => { try { const users = await User.find({ role: "customer" }).sort({ createdAt: -1 }).limit(1000); res.json({ users: users.map(publicUser) }); } catch (err) { next(err); } });

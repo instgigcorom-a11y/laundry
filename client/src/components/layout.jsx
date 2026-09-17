@@ -12,6 +12,13 @@ function orderAlertCopy(order) {
   return `New order #${order.token} from ${customer}.`;
 }
 
+function vapidKeyBytes(value) {
+  const padding = "=".repeat((4 - value.length % 4) % 4);
+  const base64 = (value + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const decoded = window.atob(base64);
+  return Uint8Array.from(decoded, (character) => character.charCodeAt(0));
+}
+
 function AdminOrderNotifier() {
   const [enabled, setEnabled] = useState(() => localStorage.getItem("ppl_order_alerts") === "on");
   const enabledRef = useRef(enabled);
@@ -27,19 +34,51 @@ function AdminOrderNotifier() {
       const context = audioContext.current || new Context();
       audioContext.current = context;
       if (context.state === "suspended") await context.resume();
-      const oscillator = context.createOscillator();
-      const gain = context.createGain();
-      oscillator.type = "sine";
-      oscillator.frequency.setValueAtTime(740, context.currentTime);
-      oscillator.frequency.setValueAtTime(988, context.currentTime + 0.16);
-      gain.gain.setValueAtTime(0.0001, context.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.14, context.currentTime + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.42);
-      oscillator.connect(gain).connect(context.destination);
-      oscillator.start();
-      oscillator.stop(context.currentTime + 0.44);
+      [[784, 0], [1047, 0.26], [1319, 0.52], [1047, 0.78]].forEach(([frequency, offset]) => {
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+        const start = context.currentTime + offset;
+        oscillator.type = "triangle";
+        oscillator.frequency.setValueAtTime(frequency, start);
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(0.52, start + 0.025);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.24);
+        oscillator.connect(gain).connect(context.destination);
+        oscillator.start(start);
+        oscillator.stop(start + 0.26);
+      });
     } catch {
       // A browser can block audio until the admin enables alerts with a click.
+    }
+  }
+
+  async function subscribeToPush(requestPermission = false) {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) return false;
+    try {
+      const config = await shopService.pushConfig();
+      if (!config.enabled || !config.publicKey) return false;
+      if (Notification.permission === "default" && requestPermission) await Notification.requestPermission();
+      if (Notification.permission !== "granted") return false;
+      const registration = await navigator.serviceWorker.register("/push-sw.js");
+      await navigator.serviceWorker.ready;
+      let subscription = await registration.pushManager.getSubscription();
+      if (!subscription) subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: vapidKeyBytes(config.publicKey) });
+      await shopService.savePushSubscription(subscription.toJSON());
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async function unsubscribeFromPush() {
+    try {
+      const registration = await navigator.serviceWorker?.getRegistration("/");
+      const subscription = await registration?.pushManager.getSubscription();
+      if (!subscription) return;
+      await shopService.deletePushSubscription(subscription.endpoint);
+      await subscription.unsubscribe();
+    } catch {
+      // Local alerts can still be disabled if an old push subscription cannot be removed.
     }
   }
 
@@ -47,11 +86,13 @@ function AdminOrderNotifier() {
     const next = !enabled;
     setEnabled(next);
     localStorage.setItem("ppl_order_alerts", next ? "on" : "off");
-    if (!next) return showToast("New order alerts paused.", "info");
+    if (!next) { void unsubscribeFromPush(); return showToast("New order alerts paused.", "info"); }
     void playChime();
-    if ("Notification" in window && Notification.permission === "default") await Notification.requestPermission();
-    showToast("New order alerts enabled.");
+    const pushEnabled = await subscribeToPush(true);
+    showToast(pushEnabled ? "New order alerts enabled, even when this browser is closed." : "New order alerts enabled while this page is open.", pushEnabled ? "success" : "info");
   }
+
+  useEffect(() => { if (enabled) void subscribeToPush(false); }, [enabled]);
 
   useEffect(() => {
     function enableFromMobileMenu() {
