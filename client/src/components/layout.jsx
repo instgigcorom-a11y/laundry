@@ -185,9 +185,9 @@ function AdminOrderNotifier() {
     const push = await subscribeToPush(true);
     if (!push.enabled) return showToast(push.message, "error");
     try {
-      await shopService.testPushNotification();
+      await shopService.testPushNotification(8);
       await inspectPushState();
-      showToast("Background test sent. Hide this tab now and look for the system notification.", "success");
+      showToast("Close this tab now. The background test will arrive in 8 seconds.", "success");
     } catch (error) {
       showToast(error.message || "The backend could not deliver a background alert.", "error");
     }

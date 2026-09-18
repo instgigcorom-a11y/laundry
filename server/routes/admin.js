@@ -101,6 +101,18 @@ router.delete("/push-subscriptions", requireAdmin, async (req, res, next) => {
 });
 router.post("/push-test", requireAdmin, async (req, res, next) => {
   try {
+    const delaySeconds = Math.max(0, Math.min(15, Math.floor(Number(req.body && req.body.delaySeconds) || 0)));
+    if (delaySeconds) {
+      const status = await pushStatusForUser(req.user._id);
+      if (!status.enabled || !status.subscriptions) return res.status(409).json({ error: "push_unavailable", message: status.message || "No background-alert subscription was saved for this admin device." });
+      const userId = req.user._id;
+      setTimeout(() => {
+        sendTestNotification(userId).then((result) => {
+          if (!result.delivered) console.warn("[push] delayed test failed: %s", result.message);
+        }).catch((error) => console.warn("[push] delayed test failed: %s", error.message));
+      }, delaySeconds * 1000);
+      return res.status(202).json({ scheduled: true, delaySeconds });
+    }
     const result = await sendTestNotification(req.user._id);
     if (!result.delivered) return res.status(409).json({ error: "push_unavailable", message: result.message });
     res.json({ delivered: result.delivered, failures: result.failures || [] });

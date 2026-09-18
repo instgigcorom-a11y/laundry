@@ -20,5 +20,5 @@ export const shopService = {
   pushStatus: () => api("/api/admin/push-status"),
   savePushSubscription: (subscription) => api("/api/admin/push-subscriptions", { method: "POST", body: JSON.stringify({ subscription }) }),
   deletePushSubscription: (endpoint) => api("/api/admin/push-subscriptions", { method: "DELETE", body: JSON.stringify({ endpoint }) }),
-  testPushNotification: () => api("/api/admin/push-test", { method: "POST", body: JSON.stringify({}) })
+  testPushNotification: (delaySeconds = 0) => api("/api/admin/push-test", { method: "POST", body: JSON.stringify({ delaySeconds }) })
 };

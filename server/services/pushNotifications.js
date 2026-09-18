@@ -63,7 +63,9 @@ async function deliver(subscriptions, payload) {
   const failures = [];
   await Promise.all(subscriptions.map(async (subscription) => {
     try {
-      await webpush.sendNotification({ endpoint: subscription.endpoint, keys: subscription.keys }, payload, { TTL: 300, urgency: "high" });
+      // Keep the message available when Chrome is fully closed and its push
+      // service resumes later. The provider may queue it for up to 24 hours.
+      await webpush.sendNotification({ endpoint: subscription.endpoint, keys: subscription.keys }, payload, { TTL: 86400, urgency: "high" });
       delivered += 1;
     } catch (error) {
       if (error.statusCode === 404 || error.statusCode === 410) await PushSubscription.deleteOne({ _id: subscription._id });
