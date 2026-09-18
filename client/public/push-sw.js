@@ -1,3 +1,11 @@
+self.addEventListener("install", (event) => {
+  event.waitUntil(self.skipWaiting());
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(self.clients.claim());
+});
+
 self.addEventListener("push", (event) => {
   let data = {};
   try { data = event.data ? event.data.json() : {}; } catch { data = { body: event.data ? event.data.text() : "You have a new order." }; }
@@ -5,7 +13,7 @@ self.addEventListener("push", (event) => {
   event.waitUntil((async () => {
     const windows = await clients.matchAll({ type: "window", includeUncontrolled: true });
     const visibleWindows = windows.filter((client) => client.visibilityState === "visible");
-    if (visibleWindows.length && data.tag !== "ppl-push-test") {
+    if (visibleWindows.length && !String(data.tag || "").startsWith("ppl-push-test")) {
       visibleWindows.forEach((client) => client.postMessage({ type: "ppl-order-alert", orderId: data.orderId, body: data.body || "A new laundry order has arrived." }));
       return;
     }
@@ -14,6 +22,7 @@ self.addEventListener("push", (event) => {
       icon: "/prem-power-mark.svg",
       badge: "/prem-power-mark.svg",
       tag: data.tag || "ppl-order",
+      silent: false,
       renotify: true,
       requireInteraction: true,
       vibrate: [180, 90, 180, 90, 260],

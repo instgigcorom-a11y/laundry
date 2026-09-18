@@ -7,5 +7,10 @@ export default defineConfig({
 	plugins: [react(), tailwindcss()],
 	// Keep every React consumer on the same runtime instance.
 	resolve: { dedupe: ["react", "react-dom"] },
-	server: { proxy: { "/api": "http://localhost:8080" } },
+	server: {
+		proxy: {
+			"/api": "http://localhost:8080",
+			"/socket.io": { target: "http://localhost:8080", ws: true },
+		},
+	},
 });

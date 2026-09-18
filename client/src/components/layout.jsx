@@ -6,6 +6,8 @@ import { BookingContext } from "../context/BookingContext";
 import { GoogleTranslate } from "./GoogleTranslate";
 import { shopService } from "../services/shopService";
 import { showToast } from "../utils/toast";
+import { io } from "socket.io-client";
+import { API_URL } from "../services/api";
 
 function orderAlertCopy(order) {
   const customer = order.deliveryAddress?.name || "Customer";
@@ -19,11 +21,18 @@ function vapidKeyBytes(value) {
   return Uint8Array.from(decoded, (character) => character.charCodeAt(0));
 }
 
+function samePushKey(currentKey, expectedKey) {
+  if (!currentKey || !expectedKey || currentKey.byteLength !== expectedKey.byteLength) return false;
+  const current = new Uint8Array(currentKey);
+  return current.every((value, index) => value === expectedKey[index]);
+}
+
 function AdminOrderNotifier() {
   const [enabled, setEnabled] = useState(() => localStorage.getItem("ppl_order_alerts") === "on");
   const [backgroundReady, setBackgroundReady] = useState(false);
+  const [liveConnected, setLiveConnected] = useState(false);
+  const [diagnostics, setDiagnostics] = useState(null);
   const enabledRef = useRef(enabled);
-  const knownOrderIds = useRef(null);
   const announcedOrderIds = useRef(new Set());
   const audioContext = useRef(null);
 
@@ -66,9 +75,17 @@ function AdminOrderNotifier() {
       const registration = await navigator.serviceWorker.register("/push-sw.js");
       await navigator.serviceWorker.ready;
       let subscription = await registration.pushManager.getSubscription();
-      if (!subscription) subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: vapidKeyBytes(config.publicKey) });
+      const applicationServerKey = vapidKeyBytes(config.publicKey);
+      // A VAPID key rotation invalidates subscriptions created for the old public key.
+      if (subscription && !samePushKey(subscription.options?.applicationServerKey, applicationServerKey)) {
+        await shopService.deletePushSubscription(subscription.endpoint);
+        await subscription.unsubscribe();
+        subscription = null;
+      }
+      if (!subscription) subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey });
       await shopService.savePushSubscription(subscription.toJSON());
       setBackgroundReady(true);
+      await refreshPushStatus();
       return { enabled: true };
     } catch (error) {
       setBackgroundReady(false);
@@ -80,8 +97,75 @@ function AdminOrderNotifier() {
     try {
       const status = await shopService.pushStatus();
       setBackgroundReady(Boolean(status.enabled && status.subscriptions));
+      setDiagnostics((current) => current ? { ...current, backend: status } : current);
+      return status;
     } catch {
       setBackgroundReady(false);
+      return null;
+    }
+  }
+
+  async function inspectPushState() {
+    const support = {
+      notifications: "Notification" in window,
+      serviceWorker: "serviceWorker" in navigator,
+      pushManager: "PushManager" in window
+    };
+    const permission = support.notifications ? Notification.permission : "unsupported";
+    let worker = { registered: false, active: false, scope: "" };
+    let browserSubscription = { exists: false, endpointHost: "", endpointTail: "", keyFingerprint: "" };
+    try {
+      if (support.serviceWorker) {
+        const registration = await navigator.serviceWorker.getRegistration("/");
+        worker = { registered: Boolean(registration), active: Boolean(registration?.active), scope: registration?.scope || "" };
+        const subscription = await registration?.pushManager.getSubscription();
+        if (subscription) {
+          const key = subscription.options?.applicationServerKey;
+          browserSubscription = {
+            exists: true,
+            endpointHost: endpointHost(subscription.endpoint),
+            endpointTail: subscription.endpoint.slice(-18),
+            keyFingerprint: key ? keyFingerprint(new Uint8Array(key)) : ""
+          };
+        }
+      }
+    } catch (error) {
+      worker.error = error.message;
+    }
+    let backend = null;
+    try { backend = await shopService.pushStatus(); } catch (error) { backend = { enabled: false, message: error.message }; }
+    const next = { support, permission, worker, browserSubscription, backend };
+    setDiagnostics(next);
+    setBackgroundReady(Boolean(backend?.enabled && backend?.subscriptions && browserSubscription.exists));
+    return next;
+  }
+
+  async function repairAlerts() {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
+      showToast("This browser does not support background push alerts.", "error");
+      return;
+    }
+    try {
+      if (Notification.permission === "default") await Notification.requestPermission();
+      if (Notification.permission !== "granted") {
+        await inspectPushState();
+        showToast("Allow notifications in browser site settings, then repair alerts again.", "error");
+        return;
+      }
+      const registration = await navigator.serviceWorker.register("/push-sw.js", { updateViaCache: "none" });
+      await registration.update();
+      await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.getSubscription();
+      if (subscription) {
+        await shopService.deletePushSubscription(subscription.endpoint);
+        await subscription.unsubscribe();
+      }
+      const push = await subscribeToPush(true);
+      await inspectPushState();
+      showToast(push.enabled ? "Background alerts repaired for this browser." : push.message, push.enabled ? "success" : "error");
+    } catch (error) {
+      await inspectPushState();
+      showToast(error.message || "Could not repair background alerts.", "error");
     }
   }
 
@@ -102,7 +186,7 @@ function AdminOrderNotifier() {
     if (!push.enabled) return showToast(push.message, "error");
     try {
       await shopService.testPushNotification();
-      await refreshPushStatus();
+      await inspectPushState();
       showToast("Background test sent. Hide this tab now and look for the system notification.", "success");
     } catch (error) {
       showToast(error.message || "The backend could not deliver a background alert.", "error");
@@ -149,30 +233,47 @@ function AdminOrderNotifier() {
   }, []);
 
   useEffect(() => {
-    let active = true;
-    async function checkOrders() {
-      try {
-        const { orders = [] } = await shopService.adminOrders();
-        if (!active) return;
-        const ids = new Set(orders.map((order) => order.id));
-        if (knownOrderIds.current) {
-          if (enabledRef.current && !document.hidden) orders.filter((order) => !knownOrderIds.current.has(order.id) && !announcedOrderIds.current.has(order.id)).forEach((order) => {
-            announcedOrderIds.current.add(order.id);
-            showToast(orderAlertCopy(order), "info");
-            void playChime();
-          });
-        }
-        knownOrderIds.current = ids;
-      } catch {
-        // The Orders page retains its own visible API error state.
-      }
+    const token = localStorage.getItem("ppl_token");
+    if (!token) return undefined;
+    const socketUrl = API_URL.replace(/\/api\/?$/, "").replace(/\/$/, "");
+    const socket = io(socketUrl || undefined, {
+      auth: { token },
+      withCredentials: true,
+      transports: ["websocket", "polling"],
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 10000
+    });
+    function receiveOrder(order) {
+      if (!enabledRef.current || !order?.id || announcedOrderIds.current.has(order.id)) return;
+      announcedOrderIds.current.add(order.id);
+      showToast(orderAlertCopy(order), "info");
+      void playChime();
     }
-    void checkOrders();
-    const timer = window.setInterval(checkOrders, 20000);
-    return () => { active = false; window.clearInterval(timer); };
+    socket.on("connect", () => setLiveConnected(true));
+    socket.on("disconnect", () => setLiveConnected(false));
+    socket.on("connect_error", () => setLiveConnected(false));
+    socket.on("order:new", receiveOrder);
+    return () => {
+      socket.off("connect");
+      socket.off("disconnect");
+      socket.off("connect_error");
+      socket.off("order:new", receiveOrder);
+      socket.disconnect();
+    };
   }, []);
 
-  return <span className="admin-alert-controls"><button className={`admin-alert-toggle ${enabled ? "on" : ""}`} type="button" onClick={enableAlerts} aria-pressed={enabled}>{enabled ? "Alerts on" : "Enable alerts"}</button>{enabled && <><button className="admin-alert-test" type="button" onClick={() => { void playChime(); showToast("Order alert sound played.", "info"); }}>Test sound</button><button className="admin-alert-test" type="button" onClick={() => void testBackgroundAlert()}>Test background</button><small className={backgroundReady ? "push-ready" : "push-not-ready"}>{backgroundReady ? "Background ready" : "Background setup needed"}</small></>}</span>;
+  return <span className="admin-alert-controls"><small className={liveConnected ? "push-ready" : "push-not-ready"}>{liveConnected ? "Live connected" : "Live reconnecting"}</small><button className={`admin-alert-toggle ${enabled ? "on" : ""}`} type="button" onClick={enableAlerts} aria-pressed={enabled}>{enabled ? "Alerts on" : "Enable alerts"}</button>{enabled && <><button className="admin-alert-test" type="button" onClick={() => { void playChime(); showToast("Order alert sound played.", "info"); }}>Test sound</button><button className="admin-alert-test" type="button" onClick={() => void testBackgroundAlert()}>Test background</button><button className="admin-alert-test" type="button" onClick={() => void repairAlerts()}>Repair</button><button className="admin-alert-test" type="button" onClick={() => void inspectPushState()}>Check</button><small className={backgroundReady ? "push-ready" : "push-not-ready"}>{backgroundReady ? "Background ready" : "Background setup needed"}</small>{diagnostics && <span className="push-diagnostics" role="status"><b>Permission: {diagnostics.permission}</b><b>SW: {diagnostics.worker.active ? "active" : diagnostics.worker.registered ? "registered" : "missing"}</b><b>Browser sub: {diagnostics.browserSubscription.exists ? "yes" : "no"}</b><b>Backend sub: {diagnostics.backend?.subscriptions || 0}</b><b>Key: {diagnostics.backend?.publicKeyFingerprint || "none"}</b>{diagnostics.backend?.message ? <em>{diagnostics.backend.message}</em> : null}</span>}</>}</span>;
+}
+
+function endpointHost(endpoint) {
+  try { return new URL(endpoint).host; } catch { return ""; }
+}
+
+function keyFingerprint(bytes) {
+  let hash = 0;
+  bytes.forEach((value) => { hash = ((hash << 5) - hash + value) | 0; });
+  return Math.abs(hash).toString(16).slice(0, 8);
 }
 
 function MobileLink({ to, label, marker, active, badge, onClick }) {

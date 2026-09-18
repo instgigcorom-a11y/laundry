@@ -10,6 +10,7 @@ const { requireAuth } = require("../middleware/auth");
 const { orderToClient } = require("../services/orderUtils");
 const { makeId, customerSnapshot, invoiceTotals } = require("../services/adminUtils");
 const { notifyAdminsOfNewOrder } = require("../services/pushNotifications");
+const { emitNewOrder } = require("../services/realtime");
 const router = express.Router();
 
 function addressSnapshot(user) {
@@ -136,8 +137,10 @@ router.post("/", requireAuth, async (req, res, next) => {
       await Order.deleteOne({ _id: order._id });
       throw invoiceError;
     }
+    const clientOrder = orderToClient(order);
+    emitNewOrder(clientOrder);
     notifyAdminsOfNewOrder(order).catch((pushError) => console.warn("[push] order alert failed: %s", pushError.message));
-    res.status(201).json({ order: orderToClient(order) });
+    res.status(201).json({ order: clientOrder });
   } catch (err) { if (err.statusCode) return res.status(err.statusCode).json({ error: "bad_order", message: err.message }); next(err); }
 });
 module.exports = router;

@@ -103,7 +103,7 @@ router.post("/push-test", requireAdmin, async (req, res, next) => {
   try {
     const result = await sendTestNotification(req.user._id);
     if (!result.delivered) return res.status(409).json({ error: "push_unavailable", message: result.message });
-    res.json({ delivered: result.delivered });
+    res.json({ delivered: result.delivered, failures: result.failures || [] });
   } catch (err) { next(err); }
 });
 router.get("/users", requireAdmin, async (req, res, next) => { try { const users = await User.find({ role: "customer" }).sort({ createdAt: -1 }).limit(1000); res.json({ users: users.map(publicUser) }); } catch (err) { next(err); } });
