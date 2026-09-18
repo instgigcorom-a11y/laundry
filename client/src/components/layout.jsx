@@ -23,6 +23,7 @@ function AdminOrderNotifier() {
   const [enabled, setEnabled] = useState(() => localStorage.getItem("ppl_order_alerts") === "on");
   const enabledRef = useRef(enabled);
   const knownOrderIds = useRef(null);
+  const announcedOrderIds = useRef(new Set());
   const audioContext = useRef(null);
 
   useEffect(() => { enabledRef.current = enabled; }, [enabled]);
@@ -53,20 +54,20 @@ function AdminOrderNotifier() {
   }
 
   async function subscribeToPush(requestPermission = false) {
-    if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) return false;
+    if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) return { enabled: false, message: "This browser does not support background push alerts." };
     try {
       const config = await shopService.pushConfig();
-      if (!config.enabled || !config.publicKey) return false;
+      if (!config.enabled || !config.publicKey) return { enabled: false, message: config.message || "VAPID keys are not configured on the backend." };
       if (Notification.permission === "default" && requestPermission) await Notification.requestPermission();
-      if (Notification.permission !== "granted") return false;
+      if (Notification.permission !== "granted") return { enabled: false, message: "Allow notifications in your browser site settings, then try again." };
       const registration = await navigator.serviceWorker.register("/push-sw.js");
       await navigator.serviceWorker.ready;
       let subscription = await registration.pushManager.getSubscription();
       if (!subscription) subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: vapidKeyBytes(config.publicKey) });
       await shopService.savePushSubscription(subscription.toJSON());
-      return true;
+      return { enabled: true };
     } catch {
-      return false;
+      return { enabled: false, message: "Could not register this device. Confirm the site uses HTTPS and retry after allowing notifications." };
     }
   }
 
@@ -82,14 +83,25 @@ function AdminOrderNotifier() {
     }
   }
 
+  async function testBackgroundAlert() {
+    const push = await subscribeToPush(true);
+    if (!push.enabled) return showToast(push.message, "error");
+    try {
+      await shopService.testPushNotification();
+      showToast("Background test sent. Look for the system notification now.", "success");
+    } catch (error) {
+      showToast(error.message || "The backend could not deliver a background alert.", "error");
+    }
+  }
+
   async function enableAlerts() {
     const next = !enabled;
     setEnabled(next);
     localStorage.setItem("ppl_order_alerts", next ? "on" : "off");
     if (!next) { void unsubscribeFromPush(); return showToast("New order alerts paused.", "info"); }
     void playChime();
-    const pushEnabled = await subscribeToPush(true);
-    showToast(pushEnabled ? "New order alerts enabled, even when this browser is closed." : "New order alerts enabled while this page is open.", pushEnabled ? "success" : "info");
+    const push = await subscribeToPush(true);
+    showToast(push.enabled ? "Background order alerts are enabled for this device." : `In-page alerts are enabled. ${push.message}`, push.enabled ? "success" : "info");
   }
 
   useEffect(() => { if (enabled) void subscribeToPush(false); }, [enabled]);
@@ -104,6 +116,24 @@ function AdminOrderNotifier() {
   }, [enabled]);
 
   useEffect(() => {
+    const testFromMobileMenu = () => { void testBackgroundAlert(); };
+    window.addEventListener("ppl-test-background-alert", testFromMobileMenu);
+    return () => window.removeEventListener("ppl-test-background-alert", testFromMobileMenu);
+  }, []);
+
+  useEffect(() => {
+    function receivePushMessage(event) {
+      const data = event.data || {};
+      if (data.type !== "ppl-order-alert" || !enabledRef.current || !data.orderId || announcedOrderIds.current.has(data.orderId)) return;
+      announcedOrderIds.current.add(data.orderId);
+      showToast(data.body || "A new laundry order has arrived.", "info");
+      void playChime();
+    }
+    navigator.serviceWorker?.addEventListener("message", receivePushMessage);
+    return () => navigator.serviceWorker?.removeEventListener("message", receivePushMessage);
+  }, []);
+
+  useEffect(() => {
     let active = true;
     async function checkOrders() {
       try {
@@ -111,10 +141,10 @@ function AdminOrderNotifier() {
         if (!active) return;
         const ids = new Set(orders.map((order) => order.id));
         if (knownOrderIds.current) {
-          if (enabledRef.current) orders.filter((order) => !knownOrderIds.current.has(order.id)).forEach((order) => {
+          if (enabledRef.current && !document.hidden) orders.filter((order) => !knownOrderIds.current.has(order.id) && !announcedOrderIds.current.has(order.id)).forEach((order) => {
+            announcedOrderIds.current.add(order.id);
             showToast(orderAlertCopy(order), "info");
             void playChime();
-            if (document.hidden && "Notification" in window && Notification.permission === "granted") new Notification("Prem Power Laundry", { body: orderAlertCopy(order) });
           });
         }
         knownOrderIds.current = ids;
@@ -127,7 +157,7 @@ function AdminOrderNotifier() {
     return () => { active = false; window.clearInterval(timer); };
   }, []);
 
-  return <span className="admin-alert-controls"><button className={`admin-alert-toggle ${enabled ? "on" : ""}`} type="button" onClick={enableAlerts} aria-pressed={enabled}>{enabled ? "Alerts on" : "Enable alerts"}</button>{enabled && <button className="admin-alert-test" type="button" onClick={() => { void playChime(); showToast("Order alert sound played.", "info"); }}>Test sound</button>}</span>;
+  return <span className="admin-alert-controls"><button className={`admin-alert-toggle ${enabled ? "on" : ""}`} type="button" onClick={enableAlerts} aria-pressed={enabled}>{enabled ? "Alerts on" : "Enable alerts"}</button>{enabled && <><button className="admin-alert-test" type="button" onClick={() => { void playChime(); showToast("Order alert sound played.", "info"); }}>Test sound</button><button className="admin-alert-test" type="button" onClick={() => void testBackgroundAlert()}>Test background</button></>}</span>;
 }
 
 function MobileLink({ to, label, marker, active, badge, onClick }) {
@@ -156,7 +186,7 @@ export function Layout({ children }) {
 
   return <>
     <header>
-      <Link to={admin ? "/admin" : "/"} className="brand">Prem Power Laundry</Link>
+      <Link to={admin ? "/admin" : "/"} className="brand" aria-label="Prem Power Laundry home"><img className="brand-logo" src="/prem-power-laundry-logo.svg" alt="Prem Power Laundry" /></Link>
       <nav className="desktop-nav" aria-label="Primary navigation">
         {admin ? <><Link to="/admin">Dashboard</Link><Link to="/admin/orders">Orders</Link><Link to="/admin/customers">Parties</Link><Link to="/admin/invoices">Invoices</Link><Link to="/admin/services">Services</Link><Link to="/admin/settings">Settings</Link><AdminOrderNotifier /></> : user ? <><Link to="/products">Services</Link><Link to="/cart">Cart ({items.length})</Link><Link to="/orders">Orders</Link></> : <><Link to="/products">Services</Link><Link to="/login">Log in</Link></>}
         {user && <><GoogleTranslate /><button onClick={leave}>Logout</button></>}
@@ -175,6 +205,7 @@ export function Layout({ children }) {
         <Link to="/admin/services" role="menuitem" onClick={() => setAdminMenuOpen(false)}>Services</Link>
         <Link to="/admin/settings" role="menuitem" onClick={() => setAdminMenuOpen(false)}>Invoice settings</Link>
         <button type="button" role="menuitem" onClick={() => window.dispatchEvent(new Event("ppl-enable-order-alerts"))}>Order alerts / test sound</button>
+        <button type="button" role="menuitem" onClick={() => window.dispatchEvent(new Event("ppl-test-background-alert"))}>Test background alert</button>
         <button type="button" role="menuitem" onClick={leave}>Logout</button>
       </div>}
       <nav className="mobile-nav admin-mobile-nav" aria-label="Admin mobile navigation">

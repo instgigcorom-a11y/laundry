@@ -18,5 +18,6 @@ export const shopService = {
   invoices: () => api("/api/admin/invoices"), saveInvoice: (invoice) => api(invoice.id ? `/api/admin/invoices/${invoice.id}` : "/api/admin/invoices", { method: invoice.id ? "PUT" : "POST", body: JSON.stringify({ invoice }) }), deleteInvoice: (id) => api(`/api/admin/invoices/${id}`, { method: "DELETE" }),
   pushConfig: () => api("/api/admin/push-config"),
   savePushSubscription: (subscription) => api("/api/admin/push-subscriptions", { method: "POST", body: JSON.stringify({ subscription }) }),
-  deletePushSubscription: (endpoint) => api("/api/admin/push-subscriptions", { method: "DELETE", body: JSON.stringify({ endpoint }) })
+  deletePushSubscription: (endpoint) => api("/api/admin/push-subscriptions", { method: "DELETE", body: JSON.stringify({ endpoint }) }),
+  testPushNotification: () => api("/api/admin/push-test", { method: "POST", body: JSON.stringify({}) })
 };

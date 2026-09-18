@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 220" role="img" aria-label="Prem Power Laundry">
+  <defs><linearGradient id="blue" x1="30" y1="20" x2="205" y2="205" gradientUnits="userSpaceOnUse"><stop stop-color="#073b68"/><stop offset="1" stop-color="#438fd2"/></linearGradient></defs>
+  <rect width="720" height="220" rx="28" fill="#fff"/>
+  <g transform="translate(34 26)" fill="none" stroke="url(#blue)" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M0 106h174M18 90c22-46 51-64 98-64h38l16 64H18Z" stroke-width="14"/>
+    <path d="M60 27h81l-12-25H60M86 13h20" stroke-width="14"/>
+    <path d="M157 0c-13 20 9 30-3 51M190 8c-13 20 9 30-3 51" stroke="#438fd2" stroke-width="10"/>
+  </g>
+  <text x="252" y="112" fill="#073b68" font-family="Arial, Helvetica, sans-serif" font-size="67" font-weight="800" letter-spacing="-3">Prem Power</text>
+  <text x="258" y="158" fill="#438fd2" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" letter-spacing="13">LAUNDRY</text>
+</svg>
