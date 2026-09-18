@@ -8,14 +8,29 @@ const privateKey = String(process.env.VAPID_PRIVATE_KEY || "").trim();
 const subject = String(process.env.VAPID_SUBJECT || "").trim();
 let configured = false;
 let configurationMessage = "VAPID keys have not been configured on the backend.";
+let lastDelivery = null;
 
 if (publicKey && privateKey && subject) {
   try {
+    if (!vapidKeysMatch(publicKey, privateKey)) throw new Error("The VAPID public and private keys do not belong to the same key pair.");
     webpush.setVapidDetails(subject, publicKey, privateKey);
     configured = true;
   } catch (error) {
     configurationMessage = "VAPID settings are invalid on the backend.";
     console.warn("[push] VAPID is disabled because its configuration is invalid: %s", error.message);
+  }
+}
+
+function vapidKeysMatch(expectedPublicKey, candidatePrivateKey) {
+  try {
+    const privateBytes = Buffer.from(candidatePrivateKey, "base64url");
+    const publicBytes = Buffer.from(expectedPublicKey, "base64url");
+    if (privateBytes.length !== 32 || publicBytes.length !== 65) return false;
+    const ecdh = crypto.createECDH("prime256v1");
+    ecdh.setPrivateKey(privateBytes);
+    return crypto.timingSafeEqual(ecdh.getPublicKey(), publicBytes);
+  } catch {
+    return false;
   }
 }
 
@@ -26,6 +41,16 @@ function pushConfig() {
     publicKeyFingerprint: configured ? fingerprint(publicKey) : "",
     subject: configured ? subject : "",
     message: configured ? "" : configurationMessage
+  };
+}
+
+function pushHealth() {
+  return {
+    configured,
+    publicKeyFingerprint: configured ? fingerprint(publicKey) : "",
+    subject: configured ? subject : "",
+    message: configured ? "" : configurationMessage,
+    lastDelivery
   };
 }
 
@@ -44,9 +69,15 @@ async function pushStatusForUser(userId) {
 }
 
 async function notifyAdminsOfNewOrder(order) {
-  if (!configured) return;
+  if (!configured) {
+    lastDelivery = { at: new Date().toISOString(), delivered: 0, total: 0, failed: 0, reason: "not_configured" };
+    return;
+  }
   const subscriptions = await PushSubscription.find().lean();
-  if (!subscriptions.length) return;
+  if (!subscriptions.length) {
+    lastDelivery = { at: new Date().toISOString(), delivered: 0, total: 0, failed: 0, reason: "no_subscriptions" };
+    return;
+  }
   const customer = order.deliveryAddress && order.deliveryAddress.name || "Customer";
   const payload = JSON.stringify({
     title: "New laundry order",
@@ -74,6 +105,13 @@ async function deliver(subscriptions, payload) {
       console.warn("[push] delivery failed for ...%s: %s", failure.endpointTail, error.message);
     }
   }));
+  lastDelivery = {
+    at: new Date().toISOString(),
+    delivered,
+    total: subscriptions.length,
+    failed: failures.length,
+    statusCodes: failures.map((failure) => failure.statusCode).filter(Boolean)
+  };
   console.log("[push] delivered %d of %d notification(s)", delivered, subscriptions.length);
   return { delivered, failures };
 }
@@ -111,4 +149,4 @@ function failureMessage(failures) {
   return first.message || "The push service could not deliver to this device.";
 }
 
-module.exports = { notifyAdminsOfNewOrder, pushConfig, pushStatusForUser, sendTestNotification };
+module.exports = { notifyAdminsOfNewOrder, pushConfig, pushHealth, pushStatusForUser, sendTestNotification };

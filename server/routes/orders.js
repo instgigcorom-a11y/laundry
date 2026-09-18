@@ -139,7 +139,9 @@ router.post("/", requireAuth, async (req, res, next) => {
     }
     const clientOrder = orderToClient(order);
     emitNewOrder(clientOrder);
-    notifyAdminsOfNewOrder(order).catch((pushError) => console.warn("[push] order alert failed: %s", pushError.message));
+    // Await the provider handoff so Render cannot finish the request before the
+    // closed-tab notification has been accepted (or its failure is logged).
+    await notifyAdminsOfNewOrder(order).catch((pushError) => console.warn("[push] order alert failed: %s", pushError.message));
     res.status(201).json({ order: clientOrder });
   } catch (err) { if (err.statusCode) return res.status(err.statusCode).json({ error: "bad_order", message: err.message }); next(err); }
 });

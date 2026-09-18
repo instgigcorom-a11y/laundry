@@ -15,6 +15,7 @@ const adminRoutes=require("./routes/admin");
 const adminBusinessRoutes=require("./routes/adminBusiness");
 const productsRoutes=require("./routes/products");
 const paymentsRoutes=require("./routes/payments");
+const {pushHealth}=require("./services/pushNotifications");
 
 const app=express();
 const ready=(async()=>{await connectDB();await ensureDatabaseIndexes();await ensureShop();await ensureStarterServices();})();
@@ -59,6 +60,7 @@ app.use(allowCors);
 app.use(express.json({limit:"3mb"}));
 app.use(cookieParser());
 app.use("/api",async(req,res,next)=>{try{await ready;next();}catch(err){next(err);}});
+app.get("/api/notification-health",(req,res)=>res.json(pushHealth()));
 
 app.use("/api/auth",authRoutes);
 app.use("/api/me",profileRoutes);
