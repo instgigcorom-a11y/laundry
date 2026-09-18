@@ -114,6 +114,7 @@ function AdminOrderNotifier() {
     const permission = support.notifications ? Notification.permission : "unsupported";
     let worker = { registered: false, active: false, scope: "" };
     let browserSubscription = { exists: false, endpointHost: "", endpointTail: "", keyFingerprint: "" };
+    let browserApplicationKey = null;
     try {
       if (support.serviceWorker) {
         const registration = await navigator.serviceWorker.getRegistration("/");
@@ -121,6 +122,7 @@ function AdminOrderNotifier() {
         const subscription = await registration?.pushManager.getSubscription();
         if (subscription) {
           const key = subscription.options?.applicationServerKey;
+          browserApplicationKey = key ? new Uint8Array(key) : null;
           browserSubscription = {
             exists: true,
             endpointHost: endpointHost(subscription.endpoint),
@@ -134,9 +136,10 @@ function AdminOrderNotifier() {
     }
     let backend = null;
     try { backend = await shopService.pushStatus(); } catch (error) { backend = { enabled: false, message: error.message }; }
-    const next = { support, permission, worker, browserSubscription, backend };
+    const keyMatches = Boolean(browserApplicationKey && backend?.publicKey && samePushKey(browserApplicationKey, vapidKeyBytes(backend.publicKey)));
+    const next = { support, permission, worker, browserSubscription, backend, keyMatches };
     setDiagnostics(next);
-    setBackgroundReady(Boolean(backend?.enabled && backend?.subscriptions && browserSubscription.exists));
+    setBackgroundReady(Boolean(backend?.enabled && backend?.subscriptions && browserSubscription.exists && keyMatches));
     return next;
   }
 
@@ -216,8 +219,16 @@ function AdminOrderNotifier() {
 
   useEffect(() => {
     const testFromMobileMenu = () => { void testBackgroundAlert(); };
+    const repairFromMobileMenu = () => { void repairAlerts(); };
+    const checkFromMobileMenu = () => { void inspectPushState(); };
     window.addEventListener("ppl-test-background-alert", testFromMobileMenu);
-    return () => window.removeEventListener("ppl-test-background-alert", testFromMobileMenu);
+    window.addEventListener("ppl-repair-background-alert", repairFromMobileMenu);
+    window.addEventListener("ppl-check-background-alert", checkFromMobileMenu);
+    return () => {
+      window.removeEventListener("ppl-test-background-alert", testFromMobileMenu);
+      window.removeEventListener("ppl-repair-background-alert", repairFromMobileMenu);
+      window.removeEventListener("ppl-check-background-alert", checkFromMobileMenu);
+    };
   }, []);
 
   useEffect(() => {
@@ -263,7 +274,7 @@ function AdminOrderNotifier() {
     };
   }, []);
 
-  return <span className="admin-alert-controls"><small className={liveConnected ? "push-ready" : "push-not-ready"}>{liveConnected ? "Live connected" : "Live reconnecting"}</small><button className={`admin-alert-toggle ${enabled ? "on" : ""}`} type="button" onClick={enableAlerts} aria-pressed={enabled}>{enabled ? "Alerts on" : "Enable alerts"}</button>{enabled && <><button className="admin-alert-test" type="button" onClick={() => { void playChime(); showToast("Order alert sound played.", "info"); }}>Test sound</button><button className="admin-alert-test" type="button" onClick={() => void testBackgroundAlert()}>Test background</button><button className="admin-alert-test" type="button" onClick={() => void repairAlerts()}>Repair</button><button className="admin-alert-test" type="button" onClick={() => void inspectPushState()}>Check</button><small className={backgroundReady ? "push-ready" : "push-not-ready"}>{backgroundReady ? "Background ready" : "Background setup needed"}</small>{diagnostics && <span className="push-diagnostics" role="status"><b>Permission: {diagnostics.permission}</b><b>SW: {diagnostics.worker.active ? "active" : diagnostics.worker.registered ? "registered" : "missing"}</b><b>Browser sub: {diagnostics.browserSubscription.exists ? "yes" : "no"}</b><b>Backend sub: {diagnostics.backend?.subscriptions || 0}</b><b>Key: {diagnostics.backend?.publicKeyFingerprint || "none"}</b>{diagnostics.backend?.message ? <em>{diagnostics.backend.message}</em> : null}</span>}</>}</span>;
+  return <span className="admin-alert-controls"><small className={liveConnected ? "push-ready" : "push-not-ready"}>{liveConnected ? "Live connected" : "Live reconnecting"}</small><button className={`admin-alert-toggle ${enabled ? "on" : ""}`} type="button" onClick={enableAlerts} aria-pressed={enabled}>{enabled ? "Alerts on" : "Enable alerts"}</button>{enabled && <><button className="admin-alert-test" type="button" onClick={() => { void playChime(); showToast("Order alert sound played.", "info"); }}>Test sound</button><button className="admin-alert-test" type="button" onClick={() => void testBackgroundAlert()}>Test background</button><button className="admin-alert-test" type="button" onClick={() => void repairAlerts()}>Repair</button><button className="admin-alert-test" type="button" onClick={() => void inspectPushState()}>Check</button><small className={backgroundReady ? "push-ready" : "push-not-ready"}>{backgroundReady ? "Background ready" : "Background setup needed"}</small>{diagnostics && <span className="push-diagnostics" role="status"><b>Permission: {diagnostics.permission}</b><b>SW: {diagnostics.worker.active ? "active" : diagnostics.worker.registered ? "registered" : "missing"}</b><b>Browser sub: {diagnostics.browserSubscription.exists ? "yes" : "no"}</b><b>Backend sub: {diagnostics.backend?.subscriptions || 0}</b><b>VAPID match: {diagnostics.keyMatches ? "yes" : "no"}</b><b>Push host: {diagnostics.browserSubscription.endpointHost || "none"}</b><b>Key: {diagnostics.backend?.publicKeyFingerprint || "none"}</b>{diagnostics.backend?.message ? <em>{diagnostics.backend.message}</em> : null}</span>}</>}</span>;
 }
 
 function endpointHost(endpoint) {
@@ -322,6 +333,8 @@ export function Layout({ children }) {
         <Link to="/admin/settings" role="menuitem" onClick={() => setAdminMenuOpen(false)}>Invoice settings</Link>
         <button type="button" role="menuitem" onClick={() => window.dispatchEvent(new Event("ppl-enable-order-alerts"))}>Order alerts / test sound</button>
         <button type="button" role="menuitem" onClick={() => window.dispatchEvent(new Event("ppl-test-background-alert"))}>Test background alert</button>
+        <button type="button" role="menuitem" onClick={() => window.dispatchEvent(new Event("ppl-repair-background-alert"))}>Repair background alerts</button>
+        <button type="button" role="menuitem" onClick={() => window.dispatchEvent(new Event("ppl-check-background-alert"))}>Check alert setup</button>
         <button type="button" role="menuitem" onClick={leave}>Logout</button>
       </div>}
       <nav className="mobile-nav admin-mobile-nav" aria-label="Admin mobile navigation">
