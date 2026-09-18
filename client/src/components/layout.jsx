@@ -21,6 +21,7 @@ function vapidKeyBytes(value) {
 
 function AdminOrderNotifier() {
   const [enabled, setEnabled] = useState(() => localStorage.getItem("ppl_order_alerts") === "on");
+  const [backgroundReady, setBackgroundReady] = useState(false);
   const enabledRef = useRef(enabled);
   const knownOrderIds = useRef(null);
   const announcedOrderIds = useRef(new Set());
@@ -56,18 +57,31 @@ function AdminOrderNotifier() {
   async function subscribeToPush(requestPermission = false) {
     if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) return { enabled: false, message: "This browser does not support background push alerts." };
     try {
-      const config = await shopService.pushConfig();
-      if (!config.enabled || !config.publicKey) return { enabled: false, message: config.message || "VAPID keys are not configured on the backend." };
+      // Permission must be requested directly from the button tap. Waiting for an API
+      // call first can make browsers reject the prompt as no longer user initiated.
       if (Notification.permission === "default" && requestPermission) await Notification.requestPermission();
       if (Notification.permission !== "granted") return { enabled: false, message: "Allow notifications in your browser site settings, then try again." };
+      const config = await shopService.pushConfig();
+      if (!config.enabled || !config.publicKey) return { enabled: false, message: config.message || "VAPID keys are not configured on the backend." };
       const registration = await navigator.serviceWorker.register("/push-sw.js");
       await navigator.serviceWorker.ready;
       let subscription = await registration.pushManager.getSubscription();
       if (!subscription) subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: vapidKeyBytes(config.publicKey) });
       await shopService.savePushSubscription(subscription.toJSON());
+      setBackgroundReady(true);
       return { enabled: true };
+    } catch (error) {
+      setBackgroundReady(false);
+      return { enabled: false, message: error.message || "Could not register this device. Confirm the site uses HTTPS and retry after allowing notifications." };
+    }
+  }
+
+  async function refreshPushStatus() {
+    try {
+      const status = await shopService.pushStatus();
+      setBackgroundReady(Boolean(status.enabled && status.subscriptions));
     } catch {
-      return { enabled: false, message: "Could not register this device. Confirm the site uses HTTPS and retry after allowing notifications." };
+      setBackgroundReady(false);
     }
   }
 
@@ -88,7 +102,8 @@ function AdminOrderNotifier() {
     if (!push.enabled) return showToast(push.message, "error");
     try {
       await shopService.testPushNotification();
-      showToast("Background test sent. Look for the system notification now.", "success");
+      await refreshPushStatus();
+      showToast("Background test sent. Hide this tab now and look for the system notification.", "success");
     } catch (error) {
       showToast(error.message || "The backend could not deliver a background alert.", "error");
     }
@@ -104,7 +119,7 @@ function AdminOrderNotifier() {
     showToast(push.enabled ? "Background order alerts are enabled for this device." : `In-page alerts are enabled. ${push.message}`, push.enabled ? "success" : "info");
   }
 
-  useEffect(() => { if (enabled) void subscribeToPush(false); }, [enabled]);
+  useEffect(() => { if (enabled) { void subscribeToPush(false); void refreshPushStatus(); } }, [enabled]);
 
   useEffect(() => {
     function enableFromMobileMenu() {
@@ -157,7 +172,7 @@ function AdminOrderNotifier() {
     return () => { active = false; window.clearInterval(timer); };
   }, []);
 
-  return <span className="admin-alert-controls"><button className={`admin-alert-toggle ${enabled ? "on" : ""}`} type="button" onClick={enableAlerts} aria-pressed={enabled}>{enabled ? "Alerts on" : "Enable alerts"}</button>{enabled && <><button className="admin-alert-test" type="button" onClick={() => { void playChime(); showToast("Order alert sound played.", "info"); }}>Test sound</button><button className="admin-alert-test" type="button" onClick={() => void testBackgroundAlert()}>Test background</button></>}</span>;
+  return <span className="admin-alert-controls"><button className={`admin-alert-toggle ${enabled ? "on" : ""}`} type="button" onClick={enableAlerts} aria-pressed={enabled}>{enabled ? "Alerts on" : "Enable alerts"}</button>{enabled && <><button className="admin-alert-test" type="button" onClick={() => { void playChime(); showToast("Order alert sound played.", "info"); }}>Test sound</button><button className="admin-alert-test" type="button" onClick={() => void testBackgroundAlert()}>Test background</button><small className={backgroundReady ? "push-ready" : "push-not-ready"}>{backgroundReady ? "Background ready" : "Background setup needed"}</small></>}</span>;
 }
 
 function MobileLink({ to, label, marker, active, badge, onClick }) {

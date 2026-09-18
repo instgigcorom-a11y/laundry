@@ -17,6 +17,7 @@ export const shopService = {
   customers: () => api("/api/admin/customers"), saveCustomer: (customer) => api(customer.id ? `/api/admin/customers/${customer.id}` : "/api/admin/customers", { method: customer.id ? "PUT" : "POST", body: JSON.stringify({ customer }) }), deleteCustomer: (id) => api(`/api/admin/customers/${id}`, { method: "DELETE" }),
   invoices: () => api("/api/admin/invoices"), saveInvoice: (invoice) => api(invoice.id ? `/api/admin/invoices/${invoice.id}` : "/api/admin/invoices", { method: invoice.id ? "PUT" : "POST", body: JSON.stringify({ invoice }) }), deleteInvoice: (id) => api(`/api/admin/invoices/${id}`, { method: "DELETE" }),
   pushConfig: () => api("/api/admin/push-config"),
+  pushStatus: () => api("/api/admin/push-status"),
   savePushSubscription: (subscription) => api("/api/admin/push-subscriptions", { method: "POST", body: JSON.stringify({ subscription }) }),
   deletePushSubscription: (endpoint) => api("/api/admin/push-subscriptions", { method: "DELETE", body: JSON.stringify({ endpoint }) }),
   testPushNotification: () => api("/api/admin/push-test", { method: "POST", body: JSON.stringify({}) })

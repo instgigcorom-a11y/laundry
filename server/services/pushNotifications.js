@@ -22,6 +22,11 @@ function pushConfig() {
   return { enabled: configured, publicKey: configured ? publicKey : "", message: configured ? "" : configurationMessage };
 }
 
+async function pushStatusForUser(userId) {
+  const subscriptions = configured ? await PushSubscription.countDocuments({ user: userId }) : 0;
+  return Object.assign(pushConfig(), { subscriptions });
+}
+
 async function notifyAdminsOfNewOrder(order) {
   if (!configured) return;
   const subscriptions = await PushSubscription.find().lean();
@@ -48,6 +53,7 @@ async function deliver(subscriptions, payload) {
       else console.warn("[push] delivery failed: %s", error.message);
     }
   }));
+  console.log("[push] delivered %d of %d notification(s)", delivered, subscriptions.length);
   return delivered;
 }
 
@@ -64,4 +70,4 @@ async function sendTestNotification(userId) {
   return { delivered, message: delivered ? "" : "The push service could not deliver to this device. Re-enable alerts and allow notifications." };
 }
 
-module.exports = { notifyAdminsOfNewOrder, pushConfig, sendTestNotification };
+module.exports = { notifyAdminsOfNewOrder, pushConfig, pushStatusForUser, sendTestNotification };

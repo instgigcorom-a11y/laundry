@@ -7,7 +7,7 @@ const AdminInvoice = require("../models/AdminInvoice");
 const Customer = require("../models/Customer");
 const Shop = require("../models/Shop");
 const PushSubscription = require("../models/PushSubscription");
-const { pushConfig, sendTestNotification } = require("../services/pushNotifications");
+const { pushConfig, pushStatusForUser, sendTestNotification } = require("../services/pushNotifications");
 const { DEFAULT_SHOP } = require("../services/bootstrap");
 const { makeId, customerSnapshot, invoiceTotals, adminInvoiceToClient } = require("../services/adminUtils");
 const { requireAdmin, publicUser } = require("../middleware/auth");
@@ -77,6 +77,9 @@ router.get("/dashboard", requireAdmin, async (req, res, next) => {
 });
 router.get("/push-config", requireAdmin, async (req, res, next) => {
   try { res.json(pushConfig()); } catch (err) { next(err); }
+});
+router.get("/push-status", requireAdmin, async (req, res, next) => {
+  try { res.json(await pushStatusForUser(req.user._id)); } catch (err) { next(err); }
 });
 router.post("/push-subscriptions", requireAdmin, async (req, res, next) => {
   try {

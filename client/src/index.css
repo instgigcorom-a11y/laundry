@@ -211,3 +211,4 @@ header { min-height: 70px; padding: 0 6vw; display: flex; align-items: center; j
 .admin-order-row .actions { flex-wrap: wrap; justify-content: flex-end; }.admin-order-row select { min-height: 34px; padding: .35rem .5rem; border: 1px solid #d9ccc4; border-radius: .55rem; background: #fff; font: 700 .75rem "Archivo", "DM Sans", sans-serif; text-transform: capitalize; }
 @media (max-width: 720px) { .admin-order-row .actions { width: 100%; justify-content: flex-start; }.admin-order-row .actions .button { flex: 1 1 auto; } }
 @media (max-width: 720px) { .brand-logo { width: 154px; height: 40px; } }
+.push-ready,.push-not-ready { display: inline-flex; align-items: center; min-height: 32px; padding: 0 .55rem; border-radius: .55rem; font: 800 .68rem "Archivo", "DM Sans", sans-serif; white-space: nowrap; }.push-ready { color: #216547; background: #e5f5eb; }.push-not-ready { color: #9b3a22; background: #fff0e8; }
