@@ -5,9 +5,11 @@ const { sanitiseRates } = require("./rates");
 const { starterProducts } = require("./starterCatalog");
 const DEFAULT_SHOP = {
   phone: "", whatsapp: "", upiId: "Q531672501@ybl", upiName: "Prem Power Laundry And Dry Clean",
-  upiMc: "0000", qrImage: "@default", pickupFee: 30, freeAbove: 300, dropDiscount: 20,
+  upiMc: "0000", qrImage: "@default", pickupFee: 0, freeAbove: 0, dropDiscount: 0,
   gstPct: 0, kgFold: 64, kgPress: 112, pressPlain: 8, pressSteam: 30,
-  businessName: "Prem Power Laundry", businessAddress: "Gurlal Bazar, Amritsar, Punjab 143001",
+  businessName: "Prem Power Laundry", businessAddress: "Shop no. 4, New Partap Nagar Maine, Gurlal Bazar, East Gobind Nagar, Pratap Nagar, Amritsar, Amritsar Cantt., Punjab 143001",
+  mapUrl: "https://maps.app.goo.gl/fhX7rC6RjevR7M3Y9?g_st=aw",
+  instagramUrl: "https://www.instagram.com/prem_power_laundry?stkn=Mm5weTdxY2R4NHdt",
   businessEmail: "", gstNumber: "", businessState: "Punjab", stateCode: "03",
   bankName: "", accountHolder: "", accountNumber: "", ifsc: "",
   defaultInvoiceNotes: "Thank you for choosing Prem Power Laundry.",
@@ -26,7 +28,18 @@ async function ensureShop() {
       invoiceSeq: 0
     });
   }
-  shop.settings = Object.assign({}, DEFAULT_SHOP, shop.settings || {});
+  const savedSettings = shop.settings || {};
+  shop.settings = Object.assign({}, DEFAULT_SHOP, savedSettings);
+  if (!savedSettings.mapUrl || !savedSettings.businessAddress || savedSettings.businessAddress === "Gurlal Bazar, Amritsar, Punjab 143001") {
+    shop.settings.businessAddress = DEFAULT_SHOP.businessAddress;
+  }
+  shop.settings.mapUrl = DEFAULT_SHOP.mapUrl;
+  shop.settings.instagramUrl = DEFAULT_SHOP.instagramUrl;
+  // Collection is permanently free; migrate databases that still store old charges.
+  shop.settings.pickupFee = 0;
+  shop.settings.freeAbove = 0;
+  shop.settings.dropDiscount = 0;
+  shop.markModified("settings");
   shop.rates = sanitiseRates(shop.rates || {});
   shop.markModified("rates");
 

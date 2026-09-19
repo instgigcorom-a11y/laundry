@@ -8,6 +8,7 @@ import { shopService } from "../services/shopService";
 import { showToast } from "../utils/toast";
 import { io } from "socket.io-client";
 import { API_URL } from "../services/api";
+import { SHOP_ADDRESS, SHOP_INSTAGRAM_URL, SHOP_MAP_URL, SHOP_REVIEW_URL } from "../data/shopDetails";
 
 function orderAlertCopy(order) {
   const customer = order.deliveryAddress?.name || "Customer";
@@ -320,6 +321,21 @@ export function Layout({ children }) {
       </nav>
     </header>
     <main>{bookingBack && <Link className="booking-back" to={bookingBack}>Back</Link>}{children}</main>
+    {!admin && <footer className={`site-footer ${user ? "with-mobile-nav" : ""}`}>
+      <div className="site-footer-brand">
+        <img src="/prem-power-laundry-logo.svg" alt="Prem Power Laundry" />
+        <p>Fresh care, every day.</p>
+      </div>
+      <div className="site-footer-location">
+        <b>Visit our shop</b>
+        <address>{SHOP_ADDRESS}</address>
+      </div>
+      <nav className="site-footer-links" aria-label="Shop links">
+        <a href={SHOP_MAP_URL} target="_blank" rel="noreferrer">Get directions</a>
+        <a href={SHOP_REVIEW_URL} target="_blank" rel="noreferrer">Review us on Google</a>
+        <a href={SHOP_INSTAGRAM_URL} target="_blank" rel="noreferrer">Follow on Instagram</a>
+      </nav>
+    </footer>}
     {user && !admin && <nav className="mobile-nav" aria-label="Mobile navigation">
       <MobileLink to="/" label="Home" marker="H" active={path === "/"} />
       <MobileLink to="/products" label="Rates" marker="R" active={path.startsWith("/products")} />

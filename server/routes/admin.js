@@ -30,7 +30,17 @@ async function nextSequence(field) {
 
 async function ensureOrderInvoice(order, actor, settings) {
   const existing = await AdminInvoice.findOne({ sourceOrderId: order.id });
-  if (existing) return existing;
+  if (existing) {
+    const itemIds = [...new Set((existing.lines || []).filter((line) => !line.note && line.itemId).map((line) => line.itemId))];
+    if (itemIds.length) {
+      const items = await Item.find({ id: { $in: itemIds } }).select("id description service");
+      const notes = new Map(items.map((item) => [item.id, String(item.description || item.service || "").trim().slice(0, 200)]));
+      let changed = false;
+      existing.lines.forEach((line) => { if (!line.note && notes.get(line.itemId)) { line.note = notes.get(line.itemId); changed = true; } });
+      if (changed) { existing.markModified("lines"); await existing.save(); }
+    }
+    return existing;
+  }
   const owner = order.owner;
   if (!owner) throw new Error("The order customer could not be found.");
   let customer = await Customer.findOne({ $or: [{ phone: owner.phone }, { email: owner.email }] });
@@ -41,7 +51,10 @@ async function ensureOrderInvoice(order, actor, settings) {
       phone: owner.phone, email: owner.email, address: order.addrText || "", createdBy: actor._id, updatedBy: actor._id
     });
   }
-  const lines = (order.items || []).map((item) => ({ itemId: item.productId || "", itemCode: "", name: item.name, unit: item.unit || "pcs", qty: item.qty, price: item.price, amount: item.subtotal, note: "" }));
+  const itemIds = [...new Set((order.items || []).map((item) => item.productId).filter(Boolean))];
+  const itemDocs = itemIds.length ? await Item.find({ id: { $in: itemIds } }).select("id description service") : [];
+  const itemNotes = new Map(itemDocs.map((item) => [item.id, String(item.description || item.service || "").trim().slice(0, 200)]));
+  const lines = (order.items || []).map((item) => ({ itemId: item.productId || "", itemCode: "", name: item.name, unit: item.unit || "pcs", qty: item.qty, price: item.price, amount: item.subtotal, note: item.description || itemNotes.get(item.productId) || "" }));
   const deliveryCharge = Number(order.invoice && order.invoice.deliveryCharge || 0);
   const totals = invoiceTotals({ lines, extraCharge: Math.max(0, deliveryCharge), discount: Math.max(0, -deliveryCharge), gstPct: 0, adjustment: 0 });
   const invoiceSeq = await nextSequence("invoiceSeq");

@@ -90,7 +90,7 @@ function sanitiseInvoiceLine(line, fallbackLine, itemDoc) {
     qty,
     price,
     amount: roundMoney(qty * price),
-    note: text(src.note || prev.note, 200)
+    note: text(src.note || prev.note || (item && (item.description || item.service)), 200)
   };
 }
 

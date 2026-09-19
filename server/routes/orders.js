@@ -64,7 +64,7 @@ async function createOrderInvoice(order, user, deliveryCharge, invoiceSettings) 
   const customer = await customerForOrder(user, order.deliveryAddress);
   const lines = order.items.map((item) => ({
     itemId: item.productId || "", itemCode: "", name: item.name, unit: item.unit || "pcs",
-    qty: item.qty, price: item.price, amount: item.subtotal, note: ""
+    qty: item.qty, price: item.price, amount: item.subtotal, note: item.description || ""
   }));
   const totals = invoiceTotals({
     lines,
@@ -103,7 +103,7 @@ router.post("/", requireAuth, async (req, res, next) => {
     const items = lines.map((line) => {
       const product = productMap.get(String(line.productId)); const quantity = Math.floor(Number(line.quantity));
       if (!Number.isInteger(quantity) || quantity < 1 || quantity > 99) throw Object.assign(new Error("Quantity must be between 1 and 99."), { statusCode: 400 });
-      return { productId: product.id, name: product.name, unit: product.unit, qty: quantity, price: product.price, subtotal: Math.round(quantity * product.price * 100) / 100 };
+      return { productId: product.id, name: product.name, unit: product.unit, description: String(product.description || product.service || "").trim().slice(0, 200), qty: quantity, price: product.price, subtotal: Math.round(quantity * product.price * 100) / 100 };
     });
     const mode = req.body.mode === "drop" ? "drop" : "pickup";
     const paidVia = String(req.body.paidVia || "").toLowerCase() === "upi" ? "UPI" : "Cash";
@@ -117,16 +117,16 @@ router.post("/", requireAuth, async (req, res, next) => {
     if (mode === "pickup" && !deliveryAddress) return res.status(400).json({ error: "bad_address", message: "Please choose a complete pickup address." });
     const settings = shop.settings || {};
     const itemsTotal = Math.round(items.reduce((sum, item) => sum + item.subtotal, 0) * 100) / 100;
-    const pickupFee = Number(settings.pickupFee || 30);
-    const freeAbove = Number(settings.freeAbove || 300);
-    const dropDiscount = Number(settings.dropDiscount || 20);
-    const deliveryCharge = mode === "pickup" ? (itemsTotal >= freeAbove ? 0 : pickupFee) : -dropDiscount;
+    const pickupFee = 0;
+    const freeAbove = 0;
+    const dropDiscount = 0;
+    const deliveryCharge = 0;
     const total = Math.max(0, Math.round((itemsTotal + deliveryCharge) * 100) / 100);
     const order = await Order.create({
       id: "ord_" + crypto.randomBytes(8).toString("base64url"), owner: req.user._id,
       token: String(shop.orderSeq).padStart(4, "0"), createdAtMs: Date.now(), items, total,
       mode, dateLabel, slot, readyBy, paidVia, deliveryAddress,
-      addrText: mode === "pickup" ? addressText(deliveryAddress) : "Prem Power Laundry, Gurlal Bazar, Amritsar",
+      addrText: mode === "pickup" ? addressText(deliveryAddress) : "Prem Power Laundry, Shop no. 4, New Partap Nagar Maine, Gurlal Bazar, East Gobind Nagar, Pratap Nagar, Amritsar, Amritsar Cantt., Punjab 143001",
       paymentStatus: "pending", status: "pending",
       invoice: { itemsTotal, deliveryCharge, pickupFee, freeAbove, dropDiscount }
     });

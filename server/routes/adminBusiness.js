@@ -128,6 +128,32 @@ async function buildAdminInvoicePayload(input, currentInvoice, shopSettings) {
   };
 }
 
+async function enrichInvoiceDescriptions(invoices) {
+  const list = Array.isArray(invoices) ? invoices : [invoices];
+  const itemIds = [...new Set(list.flatMap((invoice) => (invoice.lines || [])
+    .filter((line) => !line.note && line.itemId)
+    .map((line) => line.itemId)))];
+  if (!itemIds.length) return;
+
+  const items = await Item.find({ id: { $in: itemIds } }).select("id description service");
+  const notes = new Map(items.map((item) => [item.id, String(item.description || item.service || "").trim().slice(0, 200)]));
+  const updates = [];
+
+  list.forEach((invoice) => {
+    let changed = false;
+    invoice.lines.forEach((line) => {
+      const note = !line.note && notes.get(line.itemId);
+      if (note) { line.note = note; changed = true; }
+    });
+    if (changed) {
+      invoice.markModified("lines");
+      updates.push(invoice.save());
+    }
+  });
+
+  await Promise.all(updates);
+}
+
 router.get("/customers", requireAdmin, async (req, res, next) => {
   try {
     const customers = await Customer.find({}).sort({ createdAt: -1 }).limit(1000);
@@ -335,6 +361,7 @@ router.patch("/services/:id/order", requireAdmin, async (req, res, next) => {
 router.get("/invoices", requireAdmin, async (req, res, next) => {
   try {
     const invoices = await AdminInvoice.find({}).sort({ invoiceDate: -1, createdAt: -1 }).limit(1000);
+    await enrichInvoiceDescriptions(invoices);
     res.set("Cache-Control", "no-store");
     res.json({ invoices: invoices.map(adminInvoiceToClient) });
   } catch (err) {
