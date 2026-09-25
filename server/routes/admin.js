@@ -14,11 +14,14 @@ const { requireAdmin, publicUser } = require("../middleware/auth");
 const { orderToClient } = require("../services/orderUtils");
 const router = express.Router();
 
-const BILLING_FIELDS = ["businessName", "businessAddress", "businessEmail", "phone", "gstNumber", "businessState", "stateCode", "bankName", "accountHolder", "accountNumber", "ifsc", "upiId", "defaultInvoiceNotes", "defaultInvoiceTerms"];
+const BILLING_FIELDS = ["businessName", "businessAddress", "businessEmail", "phone", "gstNumber", "businessState", "stateCode", "bankName", "accountHolder", "accountNumber", "ifsc", "upiId", "defaultInvoiceNotes", "defaultInvoiceTerms", "pickupFee"];
 function billingSettings(input) {
   const src = input && typeof input === "object" ? input : {};
   const out = {};
-  BILLING_FIELDS.forEach((field) => { if (src[field] !== undefined) out[field] = String(src[field] || "").trim().slice(0, field === "defaultInvoiceTerms" ? 1000 : 500); });
+  BILLING_FIELDS.forEach((field) => {
+    if (src[field] === undefined) return;
+    out[field] = field === "pickupFee" ? Math.max(0, Number(src[field]) || 0) : String(src[field] || "").trim().slice(0, field === "defaultInvoiceTerms" ? 1000 : 500);
+  });
   return out;
 }
 
@@ -31,14 +34,23 @@ async function nextSequence(field) {
 async function ensureOrderInvoice(order, actor, settings) {
   const existing = await AdminInvoice.findOne({ sourceOrderId: order.id });
   if (existing) {
+    let changed = false;
+    if (!existing.orderNumber) { existing.orderNumber = "#" + order.token; changed = true; }
+    if (!existing.garmentCount) { existing.garmentCount = (existing.lines || []).reduce((sum, line) => sum + Number(line.qty || 0), 0); changed = true; }
+    if (!existing.deliveryCharge && existing.extraChargeLabel === "Pickup & delivery" && existing.extraCharge > 0) {
+      existing.deliveryCharge = existing.extraCharge;
+      existing.extraCharge = 0;
+      existing.extraChargeLabel = "";
+      changed = true;
+    }
     const itemIds = [...new Set((existing.lines || []).filter((line) => !line.note && line.itemId).map((line) => line.itemId))];
     if (itemIds.length) {
       const items = await Item.find({ id: { $in: itemIds } }).select("id description service");
       const notes = new Map(items.map((item) => [item.id, String(item.description || item.service || "").trim().slice(0, 200)]));
-      let changed = false;
       existing.lines.forEach((line) => { if (!line.note && notes.get(line.itemId)) { line.note = notes.get(line.itemId); changed = true; } });
-      if (changed) { existing.markModified("lines"); await existing.save(); }
+      if (changed) existing.markModified("lines");
     }
+    if (changed) await existing.save();
     return existing;
   }
   const owner = order.owner;
@@ -56,12 +68,12 @@ async function ensureOrderInvoice(order, actor, settings) {
   const itemNotes = new Map(itemDocs.map((item) => [item.id, String(item.description || item.service || "").trim().slice(0, 200)]));
   const lines = (order.items || []).map((item) => ({ itemId: item.productId || "", itemCode: "", name: item.name, unit: item.unit || "pcs", qty: item.qty, price: item.price, amount: item.subtotal, note: item.description || itemNotes.get(item.productId) || "" }));
   const deliveryCharge = Number(order.invoice && order.invoice.deliveryCharge || 0);
-  const totals = invoiceTotals({ lines, extraCharge: Math.max(0, deliveryCharge), discount: Math.max(0, -deliveryCharge), gstPct: 0, adjustment: 0 });
+  const totals = invoiceTotals({ lines, deliveryCharge: Math.max(0, deliveryCharge), extraCharge: 0, discount: 0, gstPct: 0, adjustment: 0 });
   const invoiceSeq = await nextSequence("invoiceSeq");
   return AdminInvoice.create({
-    id: makeId("inv"), number: "INV-" + String(invoiceSeq).padStart(5, "0"), sourceOrderId: order.id,
+    id: makeId("inv"), number: "INV-" + String(invoiceSeq).padStart(5, "0"), sourceOrderId: order.id, orderNumber: "#" + order.token,
     customerId: customer.id, customer: customerSnapshot(customer), invoiceDate: order.createdAtMs || Date.now(), lines, ...totals,
-    extraChargeLabel: deliveryCharge > 0 ? "Pickup & delivery" : "",
+    garmentCount: lines.reduce((sum, line) => sum + Number(line.qty || 0), 0),
     paid: order.paymentStatus === "paid", note: [String(settings.defaultInvoiceNotes || "").trim(), "Order #" + order.token].filter(Boolean).join(" | ").slice(0, 500),
     terms: String(settings.defaultInvoiceTerms || "").slice(0, 1000), createdBy: actor._id, updatedBy: actor._id
   });
@@ -76,6 +88,23 @@ router.put("/billing-settings", requireAdmin, async (req, res, next) => {
     req.shop.markModified("settings");
     await req.shop.save();
     res.json({ settings: Object.assign({}, DEFAULT_SHOP, req.shop.settings || {}) });
+  } catch (err) { next(err); }
+});
+router.get("/service-categories", requireAdmin, async (req, res) => {
+  res.json({ categories: Object.assign({}, DEFAULT_SHOP, req.shop.settings || {}).serviceCategories || [] });
+});
+router.post("/service-categories", requireAdmin, async (req, res, next) => {
+  try {
+    const label = String(req.body.label || "").trim().slice(0, 80);
+    const key = label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    if (!label || !key) return res.status(400).json({ error: "bad_category", message: "Enter a category name." });
+    const settings = Object.assign({}, DEFAULT_SHOP, req.shop.settings || {});
+    const categories = Array.isArray(settings.serviceCategories) ? settings.serviceCategories : [];
+    if (!categories.some((entry) => entry.key === key)) categories.push({ key, label });
+    req.shop.settings = Object.assign({}, settings, { serviceCategories: categories });
+    req.shop.markModified("settings");
+    await req.shop.save();
+    res.status(201).json({ categories });
   } catch (err) { next(err); }
 });
 

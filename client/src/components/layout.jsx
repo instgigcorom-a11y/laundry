@@ -8,7 +8,7 @@ import { shopService } from "../services/shopService";
 import { showToast } from "../utils/toast";
 import { io } from "socket.io-client";
 import { API_URL } from "../services/api";
-import { SHOP_ADDRESS, SHOP_INSTAGRAM_URL, SHOP_MAP_URL, SHOP_REVIEW_URL } from "../data/shopDetails";
+import { SHOP_ADDRESS, SHOP_INSTAGRAM_URL, SHOP_MAP_URL, SHOP_PHONE, SHOP_PHONE_TEL, SHOP_REVIEW_URL, SHOP_WHATSAPP_URL } from "../data/shopDetails";
 
 function orderAlertCopy(order) {
   const customer = order.deliveryAddress?.name || "Customer";
@@ -329,13 +329,16 @@ export function Layout({ children }) {
       <div className="site-footer-location">
         <b>Visit our shop</b>
         <address>{SHOP_ADDRESS}</address>
+        <a className="footer-phone" href={`tel:${SHOP_PHONE_TEL}`}>{SHOP_PHONE}</a>
       </div>
       <nav className="site-footer-links" aria-label="Shop links">
         <a href={SHOP_MAP_URL} target="_blank" rel="noreferrer">Get directions</a>
         <a href={SHOP_REVIEW_URL} target="_blank" rel="noreferrer">Review us on Google</a>
         <a href={SHOP_INSTAGRAM_URL} target="_blank" rel="noreferrer">Follow on Instagram</a>
+        <a href={SHOP_WHATSAPP_URL} target="_blank" rel="noreferrer">Chat on WhatsApp</a>
       </nav>
     </footer>}
+    {!admin && <a className={`whatsapp-float ${user ? "with-mobile-nav" : ""}`} href={SHOP_WHATSAPP_URL} target="_blank" rel="noreferrer" aria-label={`Chat with Prem Power Laundry on WhatsApp at ${SHOP_PHONE}`}><img src="/whatsapp-icon.png" alt="" aria-hidden="true" /><b>Chat</b></a>}
     {user && !admin && <nav className="mobile-nav" aria-label="Mobile navigation">
       <MobileLink to="/" label="Home" marker="H" active={path === "/"} />
       <MobileLink to="/products" label="Rates" marker="R" active={path.startsWith("/products")} />

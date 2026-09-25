@@ -68,17 +68,17 @@ async function createOrderInvoice(order, user, deliveryCharge, invoiceSettings) 
   }));
   const totals = invoiceTotals({
     lines,
-    extraCharge: Math.max(0, deliveryCharge),
-    discount: Math.max(0, -deliveryCharge),
+    deliveryCharge: Math.max(0, deliveryCharge),
+    extraCharge: 0,
+    discount: 0,
     gstPct: 0,
     adjustment: 0
   });
   const sequence = await nextSequence("invoiceSeq");
   return AdminInvoice.create({
-    id: makeId("inv"), number: "INV-" + String(sequence).padStart(5, "0"), sourceOrderId: order.id,
+    id: makeId("inv"), number: "INV-" + String(sequence).padStart(5, "0"), sourceOrderId: order.id, orderNumber: "#" + order.token,
     customerId: customer.id, customer: customerSnapshot(customer), invoiceDate: order.createdAtMs,
-    lines, ...totals, paid: order.paymentStatus === "paid",
-    extraChargeLabel: deliveryCharge > 0 ? "Pickup & delivery" : "",
+    lines, ...totals, garmentCount: lines.reduce((sum, line) => sum + Number(line.qty || 0), 0), paid: order.paymentStatus === "paid",
     note: [String(invoiceSettings?.defaultInvoiceNotes || "").trim(), "Order #" + order.token].filter(Boolean).join(" | ").slice(0, 500),
     terms: String(invoiceSettings?.defaultInvoiceTerms || "").slice(0, 1000),
     createdBy: user._id, updatedBy: user._id
@@ -90,6 +90,16 @@ router.get("/", requireAuth, async (req, res, next) => {
 });
 router.get("/:id", requireAuth, async (req, res, next) => {
   try { const order = await Order.findOne({ id: req.params.id, owner: req.user._id }); if (!order) return res.status(404).json({ error: "not_found", message: "Order not found." }); res.json({ order: orderToClient(order) }); } catch (err) { next(err); }
+});
+router.patch("/:id/cancel", requireAuth, async (req, res, next) => {
+  try {
+    const order = await Order.findOne({ id: req.params.id, owner: req.user._id });
+    if (!order) return res.status(404).json({ error: "not_found", message: "Order not found." });
+    if (order.status !== "pending") return res.status(409).json({ error: "cannot_cancel", message: "This order is already being processed and can no longer be cancelled online." });
+    order.status = "cancelled";
+    await order.save();
+    res.json({ order: orderToClient(order) });
+  } catch (err) { next(err); }
 });
 router.post("/", requireAuth, async (req, res, next) => {
   try {
@@ -117,10 +127,10 @@ router.post("/", requireAuth, async (req, res, next) => {
     if (mode === "pickup" && !deliveryAddress) return res.status(400).json({ error: "bad_address", message: "Please choose a complete pickup address." });
     const settings = shop.settings || {};
     const itemsTotal = Math.round(items.reduce((sum, item) => sum + item.subtotal, 0) * 100) / 100;
-    const pickupFee = 0;
+    const pickupFee = Math.max(0, Number(settings.pickupFee) || 0);
     const freeAbove = 0;
     const dropDiscount = 0;
-    const deliveryCharge = 0;
+    const deliveryCharge = mode === "pickup" ? pickupFee : 0;
     const total = Math.max(0, Math.round((itemsTotal + deliveryCharge) * 100) / 100);
     const order = await Order.create({
       id: "ord_" + crypto.randomBytes(8).toString("base64url"), owner: req.user._id,

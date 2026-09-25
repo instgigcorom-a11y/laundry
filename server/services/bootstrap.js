@@ -4,8 +4,8 @@ const Item = require("../models/Item");
 const { sanitiseRates } = require("./rates");
 const { starterProducts } = require("./starterCatalog");
 const DEFAULT_SHOP = {
-  phone: "", whatsapp: "", upiId: "Q531672501@ybl", upiName: "Prem Power Laundry And Dry Clean",
-  upiMc: "0000", qrImage: "@default", pickupFee: 0, freeAbove: 0, dropDiscount: 0,
+  phone: "+91 81460 99396", whatsapp: "+91 81460 99396", upiId: "Q531672501@ybl", upiName: "Prem Power Laundry And Dry Clean",
+  upiMc: "0000", qrImage: "@default", pickupFee: 30, freeAbove: 0, dropDiscount: 0,
   gstPct: 0, kgFold: 64, kgPress: 112, pressPlain: 8, pressSteam: 30,
   businessName: "Prem Power Laundry", businessAddress: "Shop no. 4, New Partap Nagar Maine, Gurlal Bazar, East Gobind Nagar, Pratap Nagar, Amritsar, Amritsar Cantt., Punjab 143001",
   mapUrl: "https://maps.app.goo.gl/fhX7rC6RjevR7M3Y9?g_st=aw",
@@ -13,7 +13,14 @@ const DEFAULT_SHOP = {
   businessEmail: "", gstNumber: "", businessState: "Punjab", stateCode: "03",
   bankName: "", accountHolder: "", accountNumber: "", ifsc: "",
   defaultInvoiceNotes: "Thank you for choosing Prem Power Laundry.",
-  defaultInvoiceTerms: "Payment is due when the clothes are delivered."
+  defaultInvoiceTerms: "Payment is due when the clothes are delivered.",
+  serviceCategories: [
+    { key: "laundry", label: "Laundry" },
+    { key: "dry-cleaning", label: "Dry Cleaning" },
+    { key: "shoes", label: "Shoes" },
+    { key: "household", label: "Household Items" },
+    { key: "toys", label: "Toys / Toy Dry Cleaning" }
+  ]
 };
 async function ensureShop() {
   let shop = await Shop.findOne({ key: "main" });
@@ -35,10 +42,14 @@ async function ensureShop() {
   }
   shop.settings.mapUrl = DEFAULT_SHOP.mapUrl;
   shop.settings.instagramUrl = DEFAULT_SHOP.instagramUrl;
-  // Collection is permanently free; migrate databases that still store old charges.
-  shop.settings.pickupFee = 0;
-  shop.settings.freeAbove = 0;
-  shop.settings.dropDiscount = 0;
+  if (!Number.isFinite(Number(savedSettings.pickupFee))) shop.settings.pickupFee = DEFAULT_SHOP.pickupFee;
+  shop.settings.phone = DEFAULT_SHOP.phone;
+  shop.settings.whatsapp = DEFAULT_SHOP.whatsapp;
+  const categoryMap = new Map(DEFAULT_SHOP.serviceCategories.map((entry) => [entry.key, entry]));
+  (Array.isArray(savedSettings.serviceCategories) ? savedSettings.serviceCategories : []).forEach((entry) => {
+    if (entry && entry.key && entry.label) categoryMap.set(String(entry.key), { key: String(entry.key), label: String(entry.label) });
+  });
+  shop.settings.serviceCategories = [...categoryMap.values()];
   shop.markModified("settings");
   shop.rates = sanitiseRates(shop.rates || {});
   shop.markModified("rates");

@@ -97,6 +97,7 @@ async function buildAdminInvoicePayload(input, currentInvoice, shopSettings) {
   const totals = invoiceTotals({
     lines,
     discount: src.discount,
+    deliveryCharge: src.deliveryCharge,
     extraCharge: src.extraCharge,
     gstPct: src.gstPct == null ? shopSettings.gstPct : src.gstPct,
     adjustment: src.adjustment
@@ -116,12 +117,14 @@ async function buildAdminInvoicePayload(input, currentInvoice, shopSettings) {
     lines,
     subtotal: totals.subtotal,
     discount: totals.discount,
+    deliveryCharge: totals.deliveryCharge,
     extraCharge: totals.extraCharge,
     extraChargeLabel,
     gstPct: totals.gstPct,
     gstAmount: totals.gstAmount,
     adjustment: totals.adjustment,
     total: totals.total,
+    garmentCount: Math.max(0, Number(src.garmentCount) || lines.reduce((sum, line) => sum + Number(line.qty || 0), 0)),
     paid: src.paid === undefined ? !!(current && current.paid) : !!src.paid,
     note: String(src.note || (current && current.note) || "").trim().slice(0, 500),
     terms: String(src.terms || (current && current.terms) || "").trim().slice(0, 1000)

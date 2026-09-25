@@ -99,14 +99,15 @@ function invoiceTotals(input) {
     (input.lines || []).reduce((sum, line) => sum + roundMoney(Number(line.amount || 0)), 0)
   );
   const discount = clampNumber(input.discount, 0, 1e7, 0);
+  const deliveryCharge = clampNumber(input.deliveryCharge, 0, 1e7, 0);
   const extraCharge = clampNumber(input.extraCharge, 0, 1e7, 0);
   const adjustment = clampNumber(input.adjustment, -1e6, 1e6, 0);
   const gstPct = clampNumber(input.gstPct, 0, 100, 0);
-  const taxable = Math.max(subtotal - discount + extraCharge, 0);
+  const taxable = Math.max(subtotal - discount + deliveryCharge + extraCharge, 0);
   const gstAmount = roundMoney(taxable * gstPct / 100);
   const total = roundMoney(taxable + gstAmount + adjustment);
 
-  return { subtotal, discount, extraCharge, adjustment, gstPct, gstAmount, total };
+  return { subtotal, discount, deliveryCharge, extraCharge, adjustment, gstPct, gstAmount, total };
 }
 
 function customerToClient(customer) {
@@ -157,18 +158,21 @@ function adminInvoiceToClient(invoice) {
     id: x.id,
     number: x.number,
     sourceOrderId: x.sourceOrderId || "",
+    orderNumber: x.orderNumber || "",
     customerId: x.customerId || "",
     customer: x.customer || {},
     invoiceDate: Number(x.invoiceDate) || Date.now(),
     lines: Array.isArray(x.lines) ? x.lines : [],
     subtotal: clampNumber(x.subtotal, 0, 1e9, 0),
     discount: clampNumber(x.discount, 0, 1e9, 0),
+    deliveryCharge: clampNumber(x.deliveryCharge, 0, 1e9, 0),
     extraCharge: clampNumber(x.extraCharge, 0, 1e9, 0),
     extraChargeLabel: String(x.extraChargeLabel || "").trim().slice(0, 120),
     gstPct: clampNumber(x.gstPct, 0, 100, 0),
     gstAmount: clampNumber(x.gstAmount, 0, 1e9, 0),
     adjustment: clampNumber(x.adjustment, -1e9, 1e9, 0),
     total: clampNumber(x.total, 0, 1e9, 0),
+    garmentCount: clampNumber(x.garmentCount, 0, 1e9, 0),
     paid: !!x.paid,
     note: x.note || "",
     terms: x.terms || "",

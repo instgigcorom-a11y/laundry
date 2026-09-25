@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Button, Field, Status } from "../components/common";
 import { shopService } from "../services/shopService";
+import { showToast } from "../utils/toast";
 
 const blankService = {
-  name: "", baseName: "", service: "", category: "everyday", categoryLabel: "Everyday laundry",
+  name: "", baseName: "", service: "", category: "laundry", categoryLabel: "Laundry",
   description: "", price: "", unit: "pc", readyDays: 3, gstRate: 0, hsnSacCode: "", icon: "",
   from: false, active: true, sortOrder: 0
 };
@@ -21,6 +22,9 @@ export function AdminServices() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [category, setCategory] = useState("");
+  const [categoryOptions, setCategoryOptions] = useState([]);
+  const [newCategory, setNewCategory] = useState("");
+  const [categorySaving, setCategorySaving] = useState(false);
   const [page, setPage] = useState(1);
   const [form, setForm] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -40,8 +44,9 @@ export function AdminServices() {
   async function reload() {
     setLoading(true); setError("");
     try {
-      const result = await shopService.services(queryString({ search, status, category, page }));
+      const [result, categoryData] = await Promise.all([shopService.services(queryString({ search, status, category, page })), shopService.serviceCategories()]);
       setServices(result.items || []); setPagination(result.pagination || { page: 1, pages: 1, total: 0 });
+      setCategoryOptions(categoryData.categories || []);
     } catch (err) { setError(err.message || "Could not load services."); }
     finally { setLoading(false); }
   }
@@ -67,7 +72,19 @@ export function AdminServices() {
     try { await shopService.deleteService(service.id); await reload(); }
     catch (err) { setError(err.message || "Could not remove the service."); }
   }
-  const categories = [...new Set(services.map((service) => service.category).filter(Boolean))];
+  async function addCategory(event) {
+    event.preventDefault();
+    const name = newCategory.trim();
+    if (!name) return;
+    setCategorySaving(true);
+    try { const result = await shopService.createServiceCategory(name); setCategoryOptions(result.categories || []); setNewCategory(""); showToast("Service category created."); }
+    catch (err) { showToast(err.message || "Could not create category.", "error"); }
+    finally { setCategorySaving(false); }
+  }
+  const categories = [...new Map([
+    ...categoryOptions,
+    ...services.map((service) => ({ key: service.category || "other", label: service.categoryLabel || "Other" }))
+  ].map((entry) => [entry.key, entry])).values()];
   const groupedServices = services.reduce((groups, service) => {
     const key = service.category || "other";
     if (!groups[key]) groups[key] = { label: service.categoryLabel || key.replace(/[-_]/g, " "), items: [] };
@@ -77,19 +94,42 @@ export function AdminServices() {
 
   return <section className="admin-page admin-services">
     <div className="title-row"><div><p className="eyebrow">Service catalogue</p><h1>Services</h1><p className="admin-hint">Only active services appear in the customer booking flow.</p></div><Button onClick={() => setForm({ ...blankService })}>New service</Button></div>
-    <div className="service-toolbar card">
-      <label>Search<input value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Name, category, service..." /></label>
-      <label>Status<select value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }}><option value="all">All services</option><option value="active">Active</option><option value="inactive">Inactive</option></select></label>
-      <label>Category<select value={category} onChange={(event) => { setCategory(event.target.value); setPage(1); }}><option value="">All categories</option>{categories.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
-    </div>
+    <section className="service-controls card" aria-labelledby="service-filter-title">
+      <div className="service-controls-head">
+        <div>
+          <span className="service-controls-kicker">Service directory</span>
+          <h2 id="service-filter-title">Search and filter</h2>
+          <p>Quickly find a service by its name, type, or category.</p>
+        </div>
+        {(search || status !== "all" || category) && <button type="button" className="service-clear-filters" onClick={() => { setSearch(""); setStatus("all"); setCategory(""); setPage(1); }}>Clear filters</button>}
+      </div>
+      <div className="service-toolbar">
+        <label className="service-search-field">
+          <span>Search services</span>
+          <div className="service-input-shell service-search-shell"><input value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Search by name or category" /></div>
+        </label>
+        <label>
+          <span>Status</span>
+          <div className="service-select-shell"><select value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }}><option value="all">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
+        </label>
+        <label>
+          <span>Category</span>
+          <div className="service-select-shell"><select value={category} onChange={(event) => { setCategory(event.target.value); setPage(1); }}><option value="">All categories</option>{categories.map((entry) => <option key={entry.key} value={entry.key}>{entry.label}</option>)}</select></div>
+        </label>
+      </div>
+    </section>
+    <form className="category-creator card" onSubmit={addCategory}>
+      <div className="category-creator-copy"><span className="service-controls-kicker">Categories</span><b>Create a new category</b><small>Add it once, then select it on any service.</small></div>
+      <label className="category-name-field"><span>Category name</span><input value={newCategory} onChange={(event) => setNewCategory(event.target.value)} placeholder="For example, Curtains & carpets" maxLength={80} required /></label>
+      <Button loading={categorySaving} disabled={categorySaving || !newCategory.trim()}>Create category</Button>
+    </form>
     {form && <form className="card service-form" ref={editorRef} onSubmit={save}>
       <div className="title-row"><h2>{form.id ? "Edit service" : "Create service"}</h2><button type="button" className="text-button" onClick={() => setForm(null)}>Close</button></div>
       <div className="service-form-grid">
         <Field label="Service name" value={form.name} onChange={(event) => update("name", event.target.value)} required />
         <Field label="Garment / base name" value={form.baseName} onChange={(event) => update("baseName", event.target.value)} placeholder="e.g. Shirt / T-shirt" />
         <Field label="Service label" value={form.service} onChange={(event) => update("service", event.target.value)} placeholder="e.g. Dry clean" />
-        <Field label="Category key" value={form.category} onChange={(event) => update("category", event.target.value)} required />
-        <Field label="Category display name" value={form.categoryLabel} onChange={(event) => update("categoryLabel", event.target.value)} />
+        <label className="field"><span>Category</span><select required value={form.category} onChange={(event) => { const selected = categories.find((entry) => entry.key === event.target.value); setForm((current) => ({ ...current, category: selected?.key || "", categoryLabel: selected?.label || "" })); }}><option value="">Select category</option>{categories.map((entry) => <option key={entry.key} value={entry.key}>{entry.label}</option>)}</select></label>
         <Field label="Price (Rs)" type="number" min="0" step="0.01" value={form.price} onChange={(event) => update("price", event.target.value)} required />
         <Field label="Unit" value={form.unit} onChange={(event) => update("unit", event.target.value)} required />
         <Field label="Ready in days" type="number" min="1" max="30" value={form.readyDays} onChange={(event) => update("readyDays", event.target.value)} />
