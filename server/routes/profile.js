@@ -36,7 +36,7 @@ router.post("/", requireAuth, async (req, res, next) => {
     if (rawPhone && !S.validPhone(rawPhone)) {
       return res.status(400).json({
         error: "bad_mobile",
-        message: "Enter a valid 10-digit Indian mobile number."
+        message: "Enter a valid international mobile number with its country code."
       });
     }
 

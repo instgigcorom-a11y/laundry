@@ -1,6 +1,7 @@
 "use strict";
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
+const { parseInternationalPhone } = require("./phone");
 
 const SESSION_SECRET = String(process.env.SESSION_SECRET || "");
 if (SESSION_SECRET.length < 32) throw new Error("SESSION_SECRET must be at least 32 characters.");
@@ -23,12 +24,14 @@ function normaliseEmail(input) {
 
 function validEmail(input) { return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(input || "").trim()); }
 function normalisePhone(input) {
-  let digits = String(input || "").replace(/\D+/g, "");
-  if (digits.length === 12 && digits.startsWith("91")) digits = digits.slice(2);
-  if (digits.length === 11 && digits.startsWith("0")) digits = digits.slice(1);
-  return digits;
+  const parsed = parseInternationalPhone(input, "IN");
+  return parsed.valid ? parsed.e164 : String(input || "").trim();
 }
-function validPhone(input) { return /^[6-9]\d{9}$/.test(normalisePhone(input)); }
+function validPhone(input) { return parseInternationalPhone(input, "IN").valid; }
+function phoneCandidates(input) {
+  const phone = normalisePhone(input);
+  return phone.startsWith("+91") ? [phone, phone.slice(3)] : [phone];
+}
 function parseIdentifier(input) {
   const raw = String(input || "").trim();
   if (validEmail(raw)) return { valid: true, type: "email", value: normaliseEmail(raw) };
@@ -63,4 +66,4 @@ function readSession(token) {
 }
 function maskUserIdentifier(user) { return user && user.email ? normaliseEmail(user.email).replace(/^(.{2}).*@/, "$1***@") : "unknown-user"; }
 
-module.exports = { SESSION_TTL_SECONDS, normaliseEmail, validEmail, normalisePhone, validPhone, parseIdentifier, hashPassword, checkPassword, mintSession, readSession, maskUserIdentifier };
+module.exports = { SESSION_TTL_SECONDS, normaliseEmail, validEmail, normalisePhone, validPhone, phoneCandidates, parseIdentifier, hashPassword, checkPassword, mintSession, readSession, maskUserIdentifier };

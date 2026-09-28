@@ -5,7 +5,7 @@ const CustomerSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true, index: true },
   code: { type: String, required: true, unique: true, index: true },
   name: { type: String, required: true, trim: true, maxlength: 120 },
-  phone: { type: String, trim: true, maxlength: 10, default: undefined },
+  phone: { type: String, trim: true, maxlength: 16, default: undefined },
   email: { type: String, trim: true, lowercase: true, maxlength: 160, default: undefined },
   address: { type: String, trim: true, maxlength: 400, default: "" },
   notes: { type: String, trim: true, maxlength: 400, default: "" },

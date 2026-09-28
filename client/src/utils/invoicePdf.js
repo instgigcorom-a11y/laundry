@@ -129,12 +129,50 @@ export async function downloadInvoicePdf(invoice, billing) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export async function shareInvoicePdf(invoice, billing) {
-  const blob = await createInvoicePdf(invoice, billing);
-  const file = new File([blob], `${invoice.number || "invoice"}.pdf`, { type: "application/pdf" });
-  const trackingUrl = invoice.sourceOrderId ? `${window.location.origin}/orders?order=${encodeURIComponent(invoice.sourceOrderId)}` : window.location.origin;
-  const shareData = { title: `${billing.businessName || "Prem Power Laundry"} ${invoice.number}`, text: `Invoice ${invoice.number} - ${money(invoice.total)}. Track: ${trackingUrl}`, files: [file] };
+function canvasBlob(canvas) {
+  return new Promise((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("Could not create the order image.")), "image/png", 1));
+}
+
+function canvasLines(context, value, width) {
+  const words = clean(value).split(" ").filter(Boolean); const lines = []; let line = "";
+  words.forEach((word) => { const next = line ? `${line} ${word}` : word; if (context.measureText(next).width <= width) line = next; else { if (line) lines.push(line); line = word; } });
+  if (line) lines.push(line); return lines;
+}
+
+function invoiceShareText(invoice) {
+  const orderNumber = clean(invoice.orderNumber || invoice.number || invoice.sourceOrderId || "N/A");
+  return `Thank you for your order\nYour order number is: ${orderNumber}\nVisit our website: https://pplwash.in\nPhone: +91 8146099396`;
+}
+
+export async function createInvoicePng(invoice, billing = {}) {
+  const canvas = document.createElement("canvas"); canvas.width = 1080; canvas.height = 1350;
+  const ctx = canvas.getContext("2d"); const navy = "#073f72", sky = "#3b94d7", ink = "#172a3a", muted = "#687987";
+  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, 1080, 1350);
+  ctx.fillStyle = "#edf7ff"; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(1080, 0); ctx.lineTo(1080, 95); ctx.quadraticCurveTo(650, 175, 0, 65); ctx.fill();
+  ctx.fillStyle = navy; ctx.font = "800 38px Archivo, Arial"; ctx.fillText(billing.businessName || "Prem Power Laundry", 60, 105);
+  ctx.fillStyle = sky; ctx.font = "700 16px Archivo, Arial"; ctx.fillText("CLEANER CLOTHES, BRIGHTER DAYS", 62, 135);
+  ctx.textAlign = "right"; ctx.fillStyle = navy; ctx.font = "700 17px Archivo, Arial"; ctx.fillText("FRESH CARE EVERYDAY", 1020, 88); ctx.fillStyle = muted; ctx.fillText(billing.phone || "+91 81460 99396", 1020, 118); ctx.textAlign = "left";
+  ctx.fillStyle = navy; ctx.fillRect(60, 180, 960, 88); ctx.fillStyle = "#fff"; ctx.font = "800 15px Archivo, Arial"; ctx.fillText("ORDER CONFIRMATION", 85, 215); ctx.font = "800 30px Archivo, Arial"; ctx.fillText(clean(invoice.number || "Invoice"), 85, 250);
+  ctx.textAlign = "right"; ctx.font = "600 17px Archivo, Arial"; ctx.fillText(new Date(invoice.invoiceDate || Date.now()).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }), 995, 230); ctx.textAlign = "left";
+  let y = 325; ctx.fillStyle = sky; ctx.font = "800 14px Archivo, Arial"; ctx.fillText("BILL TO", 65, y); ctx.fillStyle = ink; ctx.font = "800 24px Archivo, Arial"; ctx.fillText(clean(invoice.customer?.name || "Customer"), 65, y + 36);
+  ctx.fillStyle = muted; ctx.font = "500 15px Archivo, Arial"; canvasLines(ctx, [invoice.customer?.phone, invoice.customer?.address].filter(Boolean).join(" | ") || "No contact details", 620).slice(0, 2).forEach((entry, index) => ctx.fillText(entry, 65, y + 64 + index * 22));
+  ctx.textAlign = "right"; ctx.fillStyle = ink; ctx.font = "700 16px Archivo, Arial"; ctx.fillText(`Order: ${clean(invoice.orderNumber || invoice.number || invoice.sourceOrderId || "-")}`, 1015, y + 35); ctx.fillText(`Garments: ${Number(invoice.garmentCount || 0)}`, 1015, y + 63); ctx.textAlign = "left";
+  y += 120; ctx.fillStyle = "#e9f3fb"; ctx.fillRect(60, y, 960, 42); ctx.fillStyle = navy; ctx.font = "800 14px Archivo, Arial"; ctx.fillText("ITEM / SERVICE", 80, y + 27); ctx.textAlign = "center"; ctx.fillText("QTY", 745, y + 27); ctx.fillText("RATE", 855, y + 27); ctx.textAlign = "right"; ctx.fillText("AMOUNT", 995, y + 27); ctx.textAlign = "left"; y += 58;
+  (invoice.lines || []).slice(0, 12).forEach((item) => { const note = clean(item.note); const height = note ? 60 : 44; ctx.fillStyle = ink; ctx.font = "700 16px Archivo, Arial"; ctx.fillText(clean(item.name), 80, y + 13); if (note) { ctx.fillStyle = muted; ctx.font = "500 12px Archivo, Arial"; ctx.fillText(canvasLines(ctx, note, 570)[0] || "", 80, y + 35); } ctx.fillStyle = ink; ctx.font = "600 15px Archivo, Arial"; ctx.textAlign = "center"; ctx.fillText(String(item.qty), 745, y + 13); ctx.fillText(money(item.price), 855, y + 13); ctx.textAlign = "right"; ctx.fillText(money(item.amount), 995, y + 13); ctx.textAlign = "left"; ctx.strokeStyle = "#dce8f1"; ctx.beginPath(); ctx.moveTo(60, y + height - 7); ctx.lineTo(1020, y + height - 7); ctx.stroke(); y += height; });
+  y += 14; const totals = [["Subtotal", invoice.subtotal], Number(invoice.discount) > 0 && ["Discount", -Number(invoice.discount)], Number(invoice.deliveryCharge) > 0 && ["Pickup & delivery", invoice.deliveryCharge], Number(invoice.extraCharge) > 0 && [invoice.extraChargeLabel || "Additional charges", invoice.extraCharge], Number(invoice.gstAmount) > 0 && [`GST (${Number(invoice.gstPct || 0)}%)`, invoice.gstAmount]].filter(Boolean);
+  totals.forEach(([label, value]) => { ctx.fillStyle = muted; ctx.font = "600 15px Archivo, Arial"; ctx.fillText(label, 690, y); ctx.fillStyle = ink; ctx.textAlign = "right"; ctx.fillText(`${Number(value) < 0 ? "-" : ""}${money(Math.abs(Number(value)))}`, 995, y); ctx.textAlign = "left"; y += 27; });
+  ctx.fillStyle = navy; ctx.fillRect(665, y + 4, 355, 58); ctx.fillStyle = "#fff"; ctx.font = "800 18px Archivo, Arial"; ctx.fillText("TOTAL", 690, y + 41); ctx.textAlign = "right"; ctx.font = "800 24px Archivo, Arial"; ctx.fillText(money(invoice.total), 995, y + 42); ctx.textAlign = "left";
+  ctx.fillStyle = navy; ctx.font = "800 18px Archivo, Arial"; ctx.fillText(`Order number: ${clean(invoice.orderNumber || invoice.number || invoice.sourceOrderId || "-")}`, 65, 1190); ctx.fillStyle = muted; ctx.font = "500 15px Archivo, Arial"; ctx.fillText("Track your order at https://pplwash.in", 65, 1220); ctx.fillStyle = sky; ctx.font = "800 16px Archivo, Arial"; ctx.fillText("THANK YOU FOR CHOOSING PREM POWER LAUNDRY", 65, 1280);
+  return canvasBlob(canvas);
+}
+
+export async function shareInvoicePng(invoice, billing) {
+  const blob = await createInvoicePng(invoice, billing);
+  const orderNumber = clean(invoice.orderNumber || invoice.number || invoice.sourceOrderId || "order");
+  const file = new File([blob], `${orderNumber.replace(/[^a-z0-9_-]+/gi, "-")}.png`, { type: "image/png" });
+  const text = invoiceShareText(invoice); const shareData = { title: `${billing.businessName || "Prem Power Laundry"} ${orderNumber}`, text, files: [file] };
   if (navigator.canShare?.({ files: [file] })) return navigator.share(shareData);
-  const whatsapp = `https://wa.me/?text=${encodeURIComponent(shareData.text)}`;
-  window.open(whatsapp, "_blank", "noopener,noreferrer");
+  const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = file.name; link.click(); window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  const recipient = String(invoice.customer?.phone || "").replace(/\D/g, "");
+  window.open(`https://wa.me/${recipient}?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
 }

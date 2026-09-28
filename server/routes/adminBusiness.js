@@ -177,7 +177,7 @@ router.post("/customers", requireAdmin, async (req, res, next) => {
       return res.status(400).json({ error: "bad_email", message: "Enter a valid email address." });
     }
     if (src.phone && !S.validPhone(src.phone)) {
-      return res.status(400).json({ error: "bad_mobile", message: "Enter a valid 10-digit Indian mobile number." });
+      return res.status(400).json({ error: "bad_mobile", message: "Enter a valid international mobile number with its country code." });
     }
 
     const seq = await nextSequence("customerSeq", 1);
@@ -211,7 +211,7 @@ router.put("/customers/:id", requireAdmin, async (req, res, next) => {
       return res.status(400).json({ error: "bad_email", message: "Enter a valid email address." });
     }
     if (src.phone && !S.validPhone(src.phone)) {
-      return res.status(400).json({ error: "bad_mobile", message: "Enter a valid 10-digit Indian mobile number." });
+      return res.status(400).json({ error: "bad_mobile", message: "Enter a valid international mobile number with its country code." });
     }
 
     Object.assign(customer, src, { updatedBy: req.user._id });
@@ -256,16 +256,24 @@ router.get(["/items", "/services"], requireAdmin, async (req, res, next) => {
     const search = String(req.query.search || "").trim();
     const status = String(req.query.status || "all");
     const category = String(req.query.category || "").trim();
+    const includeAll = String(req.query.all || "").toLowerCase() === "true";
     const page = Math.max(1, Number(req.query.page) || 1);
-    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
+    const limit = Math.min(1000, Math.max(1, Number(req.query.limit) || 50));
     const query = {};
     if (status === "active") query.active = true;
     if (status === "inactive") query.active = false;
     if (category) query.category = category;
     if (search) query.$or = [{ name: { $regex: search, $options: "i" } }, { baseName: { $regex: search, $options: "i" } }, { service: { $regex: search, $options: "i" } }, { category: { $regex: search, $options: "i" } }, { description: { $regex: search, $options: "i" } }, { code: { $regex: search, $options: "i" } }];
-    const [items, total] = await Promise.all([Item.find(query).sort({ sortOrder: 1, name: 1 }).skip((page - 1) * limit).limit(limit), Item.countDocuments(query)]);
+    const itemQuery = Item.find(query).sort({ sortOrder: 1, category: 1, name: 1 });
+    if (!includeAll) itemQuery.skip((page - 1) * limit).limit(limit);
+    const [items, total] = await Promise.all([itemQuery, Item.countDocuments(query)]);
     res.set("Cache-Control", "no-store");
-    res.json({ items: items.map(itemToClient), pagination: { page, limit, total, pages: Math.max(1, Math.ceil(total / limit)) } });
+    res.json({
+      items: items.map(itemToClient),
+      pagination: includeAll
+        ? { page: 1, limit: total, total, pages: 1, all: true }
+        : { page, limit, total, pages: Math.max(1, Math.ceil(total / limit)) }
+    });
   } catch (err) {
     next(err);
   }

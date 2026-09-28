@@ -50,3 +50,6 @@ Vite embeds `VITE_API_URL` during the build. Adding it after the build will not 
 1. Open `https://pplwash.in` and log in.
 2. In browser DevTools, confirm API requests go to `https://laundry-backend-pokh.onrender.com/api/...`.
 3. Sign in, open Account, and use Change password with the current password and a new password.
+4. Open Register, choose a country, enter a valid phone number, and confirm the account is created immediately.
+5. Confirm the saved phone number includes its international calling code.
+6. From an admin invoice, choose Share on a mobile device and confirm the share sheet contains one PNG plus the order text.
