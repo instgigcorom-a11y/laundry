@@ -16,6 +16,7 @@
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-hot-toast": "^2.6.1",
+    "react-phone-input-2": "^2.15.1",
     "react-router-dom": "^7.18.3",
     "socket.io-client": "^4.8.3",
     "tailwindcss": "^4.3.3"

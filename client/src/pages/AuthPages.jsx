@@ -2,10 +2,8 @@ import { useContext, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import { showToast } from "../utils/toast";
-import { Button, Field } from "../components/common";
-import { countryOptions, parseSignupPhone } from "../utils/phone";
-
-const signupCountries = countryOptions();
+import { Button, Field, InternationalPhoneField } from "../components/common";
+import { parseSignupPhone } from "../utils/phone";
 
 function nextPath(user, location) {
   const requested = location.state?.from;
@@ -49,11 +47,12 @@ export function ForgotPasswordPage() {
   const { user, sessionLoading, location } = useSignedInRedirect();
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: "", mobileNumber: "", password: "", confirmPassword: "" });
+  const [country, setCountry] = useState("IN");
   const [error, setError] = useState(""); const [loading, setLoading] = useState(false);
   const set = (key, value) => setForm({ ...form, [key]: value });
   async function submit(event) {
     event.preventDefault();
-    const mobileNumber = parseSignupPhone(form.mobileNumber, "IN")?.number;
+    const mobileNumber = parseSignupPhone(form.mobileNumber, country)?.number;
     if (!form.email.trim() || !mobileNumber) return setError("Enter your account email and registered mobile number, including its country code.");
     if (form.password.length < 8) return setError("New password must be at least 8 characters.");
     if (form.password !== form.confirmPassword) return setError("Passwords do not match.");
@@ -62,7 +61,7 @@ export function ForgotPasswordPage() {
     catch (err) { setError(err.message); } finally { setLoading(false); }
   }
   if (sessionLoading || user) return <p className="state">Preparing your account...</p>;
-  return <AuthShell title="Forgot your password?"><p className="auth-note">Confirm your saved email and registered mobile number, then choose a new password.</p><form className="auth-register-form" onSubmit={submit} noValidate><Field label="Account email" type="email" autoComplete="email" value={form.email} onChange={(event) => set("email", event.target.value)} required /><Field label="Registered mobile number" type="tel" inputMode="tel" autoComplete="tel" placeholder="+91 98765 43210" value={form.mobileNumber} onChange={(event) => set("mobileNumber", event.target.value.replace(/[^\d+\s()-]/g, "").slice(0, 24))} required /><Field label="New password" type="password" autoComplete="new-password" minLength="8" value={form.password} onChange={(event) => set("password", event.target.value)} required /><Field label="Confirm new password" type="password" autoComplete="new-password" minLength="8" value={form.confirmPassword} onChange={(event) => set("confirmPassword", event.target.value)} required />{error && <p className="error" role="alert">{error}</p>}<Button loading={loading}>Verify and update password</Button></form><p>Remembered it? <Link to="/login">Log in</Link></p></AuthShell>;
+  return <AuthShell title="Forgot your password?"><p className="auth-note">Confirm your saved email and registered mobile number, then choose a new password.</p><form className="auth-register-form" onSubmit={submit} noValidate><Field label="Account email" type="email" autoComplete="email" value={form.email} onChange={(event) => set("email", event.target.value)} required /><InternationalPhoneField label="Registered mobile number" country={country} value={form.mobileNumber} onCountryChange={(next) => { setCountry(next); set("mobileNumber", ""); }} onChange={(value) => set("mobileNumber", value)} required /><Field label="New password" type="password" autoComplete="new-password" minLength="8" value={form.password} onChange={(event) => set("password", event.target.value)} required /><Field label="Confirm new password" type="password" autoComplete="new-password" minLength="8" value={form.confirmPassword} onChange={(event) => set("confirmPassword", event.target.value)} required />{error && <p className="error" role="alert">{error}</p>}<Button loading={loading}>Verify and update password</Button></form><p>Remembered it? <Link to="/login">Log in</Link></p></AuthShell>;
 }
 
 export function RegisterPage() {
@@ -87,5 +86,5 @@ export function RegisterPage() {
     catch (err) { setError(err.message); } finally { setLoading(false); }
   }
   if (sessionLoading || user) return <p className="state">Preparing your account...</p>;
-  return <AuthShell title="Create your account"><p className="auth-note">Add your pickup address only when you place an order.</p><form className="auth-register-form" onSubmit={submit} noValidate><Field label="Name" autoComplete="name" value={form.name} onChange={(event) => set("name", event.target.value)} required /><Field label="Email" type="email" autoComplete="email" value={form.email} onChange={(event) => set("email", event.target.value)} required /><div className="international-phone-field"><span>Mobile number</span><div className="international-phone-controls"><label className="country-select"><span className="sr-only">Country</span><select aria-label="Country" value={country} onChange={(event) => { setCountry(event.target.value); set("mobileNumber", ""); }}>{signupCountries.map((entry) => <option value={entry.country} key={entry.country}>{entry.flag} {entry.name} (+{entry.callingCode})</option>)}</select></label><input type="tel" inputMode="tel" autoComplete="tel-national" placeholder="Mobile number" value={form.mobileNumber} onChange={(event) => set("mobileNumber", event.target.value.replace(/[^\d+\s()-]/g, "").slice(0, 24))} required /></div><small className="phone-hint">Used only for your account and order updates.</small></div><Field label="Password" type="password" autoComplete="new-password" minLength="8" value={form.password} onChange={(event) => set("password", event.target.value)} required /><Field label="Confirm password" type="password" autoComplete="new-password" minLength="8" value={form.confirmPassword} onChange={(event) => set("confirmPassword", event.target.value)} required />{error && <p className="error" role="alert">{error}</p>}<Button loading={loading}>Create account</Button></form><p>Already registered? <Link to="/login" state={{ from: location.state?.from }}>Log in</Link></p></AuthShell>;
+  return <AuthShell title="Create your account"><p className="auth-note">Add your pickup address only when you place an order.</p><form className="auth-register-form" onSubmit={submit} noValidate><Field label="Name" autoComplete="name" value={form.name} onChange={(event) => set("name", event.target.value)} required /><Field label="Email" type="email" autoComplete="email" value={form.email} onChange={(event) => set("email", event.target.value)} required /><InternationalPhoneField country={country} value={form.mobileNumber} onCountryChange={(next) => { setCountry(next); set("mobileNumber", ""); }} onChange={(value) => set("mobileNumber", value)} hint="Used only for your account and order updates." required /><Field label="Password" type="password" autoComplete="new-password" minLength="8" value={form.password} onChange={(event) => set("password", event.target.value)} required /><Field label="Confirm password" type="password" autoComplete="new-password" minLength="8" value={form.confirmPassword} onChange={(event) => set("confirmPassword", event.target.value)} required />{error && <p className="error" role="alert">{error}</p>}<Button loading={loading}>Create account</Button></form><p>Already registered? <Link to="/login" state={{ from: location.state?.from }}>Log in</Link></p></AuthShell>;
 }

@@ -279,9 +279,15 @@ header { min-height: 70px; padding: 0 6vw; display: flex; align-items: center; j
 .auth-register-form .international-phone-field { grid-column: 1 / -1; }
 .international-phone-field { display: grid; gap: .4rem; }
 .international-phone-field > span { color: #536259; font: 850 .72rem "Archivo", "DM Sans", sans-serif; }
-.international-phone-controls { display: grid; grid-template-columns: minmax(220px, .95fr) minmax(180px, 1fr); gap: .55rem; }
-.international-phone-controls select, .international-phone-controls input { width: 100%; min-height: 48px; padding: .68rem .75rem; border: 1px solid #d9ccc4; border-radius: .72rem; outline: 0; background: #fff; color: #23372e; font: 650 .8rem "Archivo", "DM Sans", sans-serif; transition: border-color .18s ease, box-shadow .18s ease; }
-.international-phone-controls select { padding-right: 2rem; cursor: pointer; }
-.international-phone-controls select:focus, .international-phone-controls input:focus { border-color: #2d7257; box-shadow: 0 0 0 3px rgba(45,114,87,.13); }
+.international-phone-controls.react-tel-input { width: 100%; font-family: "Archivo", "DM Sans", sans-serif; }
+.international-phone-controls.react-tel-input .international-phone-input.form-control { width: 100%; min-height: 54px; padding-left: 58px; border: 1px solid #d9ccc4; border-radius: .72rem; background: #fff; color: #23372e; font: 650 .86rem "Archivo", "DM Sans", sans-serif; transition: border-color .18s ease, box-shadow .18s ease; }
+.international-phone-controls.react-tel-input .international-phone-input.form-control:focus { border-color: #2d7257; box-shadow: 0 0 0 3px rgba(45,114,87,.13); }
+.international-phone-controls.react-tel-input .international-phone-button.flag-dropdown { width: 48px; border: 1px solid #d9ccc4; border-radius: .72rem 0 0 .72rem; background: #f7faf5; }
+.international-phone-controls.react-tel-input .international-phone-button.flag-dropdown.open { border-color: #2d7257; border-radius: .72rem 0 0 .72rem; background: #edf5ea; }
+.international-phone-controls.react-tel-input .selected-flag { width: 47px; padding-left: 14px; border-radius: .72rem 0 0 .72rem; }
+.international-phone-controls.react-tel-input .international-phone-dropdown.country-list { width: min(350px, calc(100vw - 3rem)); max-height: 280px; margin-top: 7px; border: 1px solid #d9ccc4; border-radius: .8rem; box-shadow: 0 16px 36px rgba(25, 53, 42, .18); background: #fff; }
+.international-phone-controls.react-tel-input .country { display: flex; align-items: center; min-height: 39px; padding: .5rem .65rem; color: #23372e; font-size: .78rem; }
+.international-phone-controls.react-tel-input .country.highlight, .international-phone-controls.react-tel-input .country:hover { background: #edf5ea; }
+.international-phone-controls.react-tel-input .search { position: sticky; top: 0; z-index: 2; padding: .55rem; background: #fff; }
+.international-phone-controls.react-tel-input .international-phone-search.search-box { width: calc(100% - 8px); min-height: 38px; margin: 0; padding: .45rem .65rem; border: 1px solid #d9ccc4; border-radius: .55rem; font: 650 .76rem "Archivo", "DM Sans", sans-serif; }
 .phone-hint { color: #718078; font-size: .7rem; line-height: 1.4; }
-@media (max-width: 650px) { .international-phone-controls { grid-template-columns: 1fr; } }
