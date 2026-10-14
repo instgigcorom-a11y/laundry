@@ -1,4 +1,4 @@
-export const SHOP_ADDRESS = "Shop no. 4, New Partap Nagar Maine, Gurlal Bazar, East Gobind Nagar, Pratap Nagar, Amritsar, Amritsar Cantt., Punjab 143001";
+export const SHOP_ADDRESS = "Shop no. 4, New Partap Nagar Maine, Gurlal Bazar, East Gobind Nagar, Pratap Nagar, Amritsar, Punjab 143001";
 export const SHOP_MAP_URL = "https://maps.app.goo.gl/fhX7rC6RjevR7M3Y9?g_st=aw";
 export const SHOP_INSTAGRAM_URL = "https://www.instagram.com/prem_power_laundry?stkn=Mm5weTdxY2R4NHdt";
 export const SHOP_HOURS = "8:30 AM - 10:00 PM";

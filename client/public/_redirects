@@ -1,0 +1,9 @@
+# Static files (including pre-rendered directories) take precedence.
+/laundry-service-amritsar /laundry-service-amritsar/ 301
+/dry-cleaning-amritsar /dry-cleaning-amritsar/ 301
+/areas-we-serve /areas-we-serve/ 301
+/pricing /pricing/ 301
+/about /about/ 301
+/contact /contact/ 301
+# Keep the interactive app shell for existing customer and admin URLs.
+/* /app.html 200

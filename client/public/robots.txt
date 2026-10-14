@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /account
+Disallow: /cart
+Disallow: /orders
+Disallow: /addresses
+Disallow: /schedule
+Disallow: /payment
+Disallow: /confirmation
+Sitemap: https://pplwash.in/sitemap.xml

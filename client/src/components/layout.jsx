@@ -10,6 +10,8 @@ import { io } from "socket.io-client";
 import { API_URL } from "../services/api";
 import { SHOP_ADDRESS, SHOP_INSTAGRAM_URL, SHOP_MAP_URL, SHOP_PHONE, SHOP_PHONE_TEL, SHOP_REVIEW_URL, SHOP_WHATSAPP_URL } from "../data/shopDetails";
 
+import { publicPages } from '../data/publicPages.js';
+
 function orderAlertCopy(order) {
   const customer = order.deliveryAddress?.name || "Customer";
   return `New order #${order.token} from ${customer}.`;
@@ -320,6 +322,7 @@ export function Layout({ children }) {
         {user && <><GoogleTranslate /><button onClick={leave}>Logout</button></>}
       </nav>
     </header>
+    {!admin && <nav className="public-nav" aria-label="Services and shop information">{publicPages.map(page => <Link key={page.path} to={page.path} aria-current={path === page.path ? "page" : undefined}>{page.label}</Link>)}</nav>}
     <main>{bookingBack && <Link className="booking-back" to={bookingBack}>Back</Link>}{children}</main>
     {!admin && <footer className={`site-footer ${user ? "with-mobile-nav" : ""}`}>
       <div className="site-footer-brand">
