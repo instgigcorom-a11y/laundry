@@ -322,7 +322,6 @@ export function Layout({ children }) {
         {user && <><GoogleTranslate /><button onClick={leave}>Logout</button></>}
       </nav>
     </header>
-    {!admin && <nav className="public-nav" aria-label="Services and shop information">{publicPages.map(page => <Link key={page.path} to={page.path} aria-current={path === page.path ? "page" : undefined}>{page.label}</Link>)}</nav>}
     <main>{bookingBack && <Link className="booking-back" to={bookingBack}>Back</Link>}{children}</main>
     {!admin && <footer className={`site-footer ${user ? "with-mobile-nav" : ""}`}>
       <div className="site-footer-brand">
@@ -339,6 +338,9 @@ export function Layout({ children }) {
         <a href={SHOP_REVIEW_URL} target="_blank" rel="noreferrer">Review us on Google</a>
         <a href={SHOP_INSTAGRAM_URL} target="_blank" rel="noreferrer">Follow on Instagram</a>
         <a href={SHOP_WHATSAPP_URL} target="_blank" rel="noreferrer">Chat on WhatsApp</a>
+      </nav>
+      <nav className="site-footer-pages" aria-label="Services and shop information">
+        {publicPages.map(page => <Link key={page.path} to={page.path} aria-current={path.replace(/\/+$/, "") === page.path.replace(/\/+$/, "") ? "page" : undefined}>{page.label}</Link>)}
       </nav>
     </footer>}
     {!admin && <a className={`whatsapp-float ${user ? "with-mobile-nav" : ""}`} href={SHOP_WHATSAPP_URL} target="_blank" rel="noreferrer" aria-label={`Chat with Prem Power Laundry on WhatsApp at ${SHOP_PHONE}`}><img src="/whatsapp-icon.png" alt="" aria-hidden="true" /><b>Chat</b></a>}
