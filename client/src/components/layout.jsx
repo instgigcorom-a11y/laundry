@@ -10,7 +10,9 @@ import { io } from "socket.io-client";
 import { API_URL } from "../services/api";
 import { SHOP_ADDRESS, SHOP_INSTAGRAM_URL, SHOP_MAP_URL, SHOP_PHONE, SHOP_PHONE_TEL, SHOP_REVIEW_URL, SHOP_WHATSAPP_URL } from "../data/shopDetails";
 
-import { publicPages } from '../data/publicPages.js';
+import { primaryPublicPages } from '../data/publicPages.js';
+import { ServiceTags } from './ServiceTags.jsx';
+import { HomeHeader } from './HomeLanding.jsx';
 
 function orderAlertCopy(order) {
   const customer = order.deliveryAddress?.name || "Customer";
@@ -315,14 +317,15 @@ export function Layout({ children }) {
   async function leave() { await logout(); navigate("/login"); }
 
   return <>
-    <header>
+    {path === '/' && !admin ? <HomeHeader user={user} itemCount={items.reduce((sum, item) => sum + item.quantity, 0)} onLogout={leave} /> : <header>
       <Link to={admin ? "/admin" : "/"} className="brand" aria-label="Prem Power Laundry home"><img className="brand-logo" src="/prem-power-laundry-logo.svg" alt="Prem Power Laundry" /></Link>
       <nav className="desktop-nav" aria-label="Primary navigation">
         {admin ? <><Link to="/admin">Dashboard</Link><Link to="/admin/orders">Orders</Link><Link to="/admin/customers">Parties</Link><Link to="/admin/invoices">Invoices</Link><Link to="/admin/services">Services</Link><Link to="/admin/settings">Settings</Link><AdminOrderNotifier /></> : user ? <><Link to="/products">Services</Link><Link to="/cart">Cart ({items.length})</Link><Link to="/orders">Orders</Link></> : <><Link to="/products">Services</Link><Link to="/login">Log in</Link></>}
         {user && <><GoogleTranslate /><button onClick={leave}>Logout</button></>}
       </nav>
-    </header>
-    <main>{bookingBack && <Link className="booking-back" to={bookingBack}>Back</Link>}{children}</main>
+    </header>}
+    <main className={path === '/' && !admin ? 'landing-main' : undefined}>{bookingBack && <Link className="booking-back" to={bookingBack}>Back</Link>}{children}</main>
+    {!admin && <ServiceTags />}
     {!admin && <footer className={`site-footer ${user ? "with-mobile-nav" : ""}`}>
       <div className="site-footer-brand">
         <img src="/prem-power-laundry-logo.svg" alt="Prem Power Laundry" />
@@ -340,7 +343,7 @@ export function Layout({ children }) {
         <a href={SHOP_WHATSAPP_URL} target="_blank" rel="noreferrer">Chat on WhatsApp</a>
       </nav>
       <nav className="site-footer-pages" aria-label="Services and shop information">
-        {publicPages.map(page => <Link key={page.path} to={page.path} aria-current={path.replace(/\/+$/, "") === page.path.replace(/\/+$/, "") ? "page" : undefined}>{page.label}</Link>)}
+        {primaryPublicPages.map(page => <Link key={page.path} to={page.path} aria-current={path.replace(/\/+$/, "") === page.path.replace(/\/+$/, "") ? "page" : undefined}>{page.label}</Link>)}
       </nav>
     </footer>}
     {!admin && <a className={`whatsapp-float ${user ? "with-mobile-nav" : ""}`} href={SHOP_WHATSAPP_URL} target="_blank" rel="noreferrer" aria-label={`Chat with Prem Power Laundry on WhatsApp at ${SHOP_PHONE}`}><img src="/whatsapp-icon.png" alt="" aria-hidden="true" /><b>Chat</b></a>}

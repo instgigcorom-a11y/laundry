@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build && node scripts/prerender.mjs",
     "verify:seo": "node scripts/verify-seo.mjs",
+    "verify:homepage": "node scripts/verify-homepage.mjs",
     "lint": "oxlint",
     "preview": "vite preview"
   },

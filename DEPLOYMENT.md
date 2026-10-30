@@ -63,7 +63,8 @@ Vite embeds `VITE_API_URL` during the build. Adding it after the build will not 
 Build from `client` with `npm run build` and publish **all of `client/dist`**.
 The build uses React server rendering through Vite to generate initial HTML for
 `/`, `/laundry-service-amritsar/`, `/dry-cleaning-amritsar/`,
-`/areas-we-serve/`, `/pricing/`, `/about/`, and `/contact/`. Each directory
+`/areas-we-serve/`, `/pricing/`, `/about/`, and `/contact/`, plus the eight service
+guide URLs listed below. Each directory
 contains its own `index.html`, title, description, canonical URL, visible content,
 and business JSON-LD. The browser hydrates the same React routes. No production
 Node rendering server is required. See [Vite's SSR guide](https://vite.dev/guide/ssr.html).
@@ -79,7 +80,7 @@ Keep `/products/` and all existing account, booking and admin routes available.
 No existing public URL was replaced, so no replacement redirects are required.
 
 After building, run `npm run verify:seo` from `client`. This starts a temporary
-Vite production preview and checks direct HTTP responses for all seven public
+Vite production preview and checks direct HTTP responses for all fifty-four public
 pages, including their slashless variants, without executing client JavaScript.
 It also checks all 39 candidate areas, price row counts, sitemap and business
 schema. Repeat the URL checks against the live host after deployment to catch
@@ -94,7 +95,85 @@ update the published rate card and rebuild to keep the static prices aligned.
 The new pages ask customers to confirm hours, pickup coverage, charges and
 return dates instead of publishing unverified schedules or promises.
 
+### Clickable service tags
+
+The visible Tags section above the footer links to ten distinct service topics:
+laundry and dry cleaning use their existing pages; eight additional guides cover
+steam pressing, shoes, curtains, carpets, blankets, suits, sarees and bags.
+Their URLs are `/steam-press-amritsar/`, `/shoe-cleaning-amritsar/`,
+`/curtain-dry-cleaning-amritsar/`, `/carpet-cleaning-amritsar/`,
+`/blanket-dry-cleaning-amritsar/`, `/suit-dry-cleaning-amritsar/`,
+`/saree-dry-cleaning-amritsar/` and `/bag-cleaning-amritsar/`.
+
+Guide content, rate-card filters and tag labels live in
+`client/src/data/serviceGuides.js`; the link component is
+`client/src/components/ServiceTags.jsx`. Rates come from the existing public
+catalogue rather than a second price list. Guides include distinct service
+information, item preparation guidance, published rates, visible FAQs and
+contact actions. The ten topics are an editorial selection from the verified
+catalogue, without an assertion about measured keyword volumes or rankings.
+The main footer keeps the original seven navigation links. The sitemap now
+contains fifty-five URLs, including the existing `/products/` catalogue. The build
+generates canonical redirects for every public page. `npm run verify:seo`
+checks all fifty-four initial HTML responses, exactly ten clickable tags on each,
+guide content, prices, FAQs, links, assets, sitemap and legacy route fallbacks.
+
+### Area enquiry pages and business FAQs
+
+All 39 entries in `/areas-we-serve/` now link to
+`/areas-we-serve/<area-slug>/`. These are enquiry and directions pages for the
+single existing shop, not new branches or guarantees of coverage. Each has its
+own title, description, canonical URL, area-specific enquiry prompt, approximate
+distance band, Google Maps directions originating from that named area, and a
+WhatsApp enquiry with the area filled in. Optional address/item fields update
+the WhatsApp message in the browser; the customer reviews and sends it in
+WhatsApp. These fields are not saved and do not create a booking. Use the shop
+pin and confirm the precise starting point in Maps before travelling. No exact
+road distance, travel time or new local landmark is invented.
+
+Area page data is built from the existing groups and
+`client/src/data/areaGuides.js`; the enquiry interface is in
+`client/src/components/AreaContent.jsx`. All area pages are pre-rendered and
+included in the sitemap and canonical redirects. They link back to the areas
+directory, service pages, prices, contact details and home FAQs. Other entries
+in the same approximate band are labelled as such, without assuming adjacency.
+
+The home, areas directory and contact pages include ten native HTML FAQ
+accordions. All answers exist in the initial HTML and can be expanded without
+JavaScript. Content lives in `client/src/data/businessFaqs.js`; prices in those
+answers are derived from the existing public catalogue. The answers explain
+services, location, booking, prices, pickup confirmation, turnaround enquiries,
+household items, shoes/bags and item preparation without promising unverified
+offers, express turnaround, certifications or free delivery.
+
 ## Check after deployment
+
+### Responsive homepage
+
+The homepage follows the supplied green-and-cream design reference. Its React
+components and scoped responsive styles are in
+`client/src/components/HomeLanding.jsx` and `homeLanding.css`. The four care
+cards read prices from the existing public catalogue and link to service pages.
+Mobile navigation uses a native details menu. The homepage retains the existing
+business FAQs, shop address, account links, area directory and contact actions.
+Other routes retain their layouts; a tablet footer adjustment prevents overflow.
+
+Run `npm run verify:homepage` in `client` to check widths 320, 390, 768, 1024 and
+1440 in an installed Chromium browser. It defaults to Windows Edge or Chrome;
+set `BROWSER_BIN` to an installed browser elsewhere. The test checks layout,
+image loading, menu/FAQ interactions, service-card navigation, homepage FAQ anchor
+navigation and browser exceptions. It saves desktop and phone screenshots under
+`client/node_modules/.cache/ppl-homepage-qa/` and closes its browser/server.
+Run `npm run verify:seo` separately for all public pages and the sitemap.
+
+The illustrative hero asset is `client/public/images/home-laundry-hero.png`,
+created with the built-in `image_gen` tool using the user's homepage reference.
+It is an illustration of laundry care, not a photograph of the actual shop.
+Final image prompt:
+
+> Create a website hero PHOTOGRAPH ASSET only, based on the photographic right-hand portion of the reference homepage image. No website UI, no text, no logos, no typography, no cards, no buttons. Square or portrait composition: neatly folded forest green cotton shirt on top of ivory and beige terry towels on a pale marble counter, soft sunlit laundry room with white front-load washer, warm light oak cabinetry, small leafy green plants, a few hanging forest-green and ivory shirts in background. Premium calm editorial product photography, realistic woven cotton and towel texture, warm cream sage and dark forest-green palette. Main folded stack foreground on right-center, washer background left-center. Natural depth of field and soft daylight. Full image photographic without graphic framing or decorations. This is illustrative laundry photography, not a photograph of the actual shop.
+
+### Live checks
 
 1. Open `https://pplwash.in` and log in.
 2. In browser DevTools, confirm API requests go to `https://laundry-backend-pokh.onrender.com/api/...`.

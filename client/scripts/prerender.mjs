@@ -25,6 +25,9 @@ try {
   }
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${[...publicPages.map(page => page.path), '/products/'].map(path => `  <url><loc>${SITE_URL}${path}</loc></url>`).join('\n')}\n</urlset>\n`;
   await writeFile('dist/sitemap.xml', sitemap);
+  // Keep canonical redirects in sync as new service guides are added.
+  const redirects = publicPages.filter(page => page.path !== '/').map(page => `${page.path.slice(0, -1)} ${page.path} 301`);
+  await writeFile('dist/_redirects', `# Canonical public URLs\n${redirects.join('\n')}\n# Existing files take precedence over the client app fallback.\n/* /app.html 200\n`);
 } finally {
   await vite.close();
 }

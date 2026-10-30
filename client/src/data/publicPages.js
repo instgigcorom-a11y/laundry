@@ -1,7 +1,9 @@
 import { SHOP_MAP_URL, SHOP_PHONE_TEL } from './shopDetails.js';
+import { serviceGuides } from './serviceGuides.js';
+import { createAreaPages } from './areaGuides.js';
 
 export const SITE_URL = 'https://pplwash.in';
-export const publicPages = [
+export const primaryPublicPages = [
   { path: '/', label: 'Home', title: 'Laundry & Dry Cleaning in Amritsar | Prem Power Laundry', h1: 'Laundry & Dry Cleaning in Amritsar', description: 'Prem Power Laundry in Gurlal Bazar, Amritsar. Explore laundry, dry cleaning and pressing rates, visit our shop or contact us to confirm pickup coverage.' },
   { path: '/laundry-service-amritsar/', label: 'Laundry', title: 'Laundry Service in Amritsar | Prem Power Laundry', h1: 'Laundry Service in Amritsar', description: 'Compare wash & fold and wash & press at Prem Power Laundry, Amritsar. Check weight-based rates and contact the shop about your clothes and pickup address.' },
   { path: '/dry-cleaning-amritsar/', label: 'Dry cleaning', title: 'Dry Cleaning in Amritsar | Prem Power Laundry', h1: 'Dry Cleaning in Amritsar', description: 'Find garment and household dry cleaning rates at Prem Power Laundry in Gurlal Bazar, Amritsar. Discuss the item, fabric and final price with our shop.' },
@@ -17,6 +19,9 @@ export const areaGroups = [
   ['2–2.5 km', ['Amritsar Colony', 'Gurdial Nagar', 'Guru Amar Dass Nagar', 'Katra Ahluwalia', 'Mohkampura', 'Moni Chowk', 'Rasulpur', 'Sharifpura', 'Sunder Nagar']],
   ['2.5–3 km', ['Baba Phoola Singh', 'Bhagta Wala Gate', 'Bharat Nagar', 'Gilwali Gate', 'Himatpura', 'Ishwar Nagar', 'Krishna Square', 'Mehar Pura', 'New Amritsar Colony', 'Pawan Nagar', 'Preet Nagar', 'Shivala Colony']],
 ];
+
+export const areaPages = createAreaPages(areaGroups);
+export const publicPages = [...primaryPublicPages, ...serviceGuides, ...areaPages];
 
 export const localBusiness = {
   '@context': 'https://schema.org', '@type': 'DryCleaningOrLaundry',
