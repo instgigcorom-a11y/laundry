@@ -1,3 +1,4 @@
+import '../app.css';
 import { useContext, useEffect, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { CartContext } from "../context/CartContext";

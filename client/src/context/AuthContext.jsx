@@ -3,7 +3,7 @@ import { authService } from "../services/authService";
 export const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null); const [loading, setLoading] = useState(true);
-  useEffect(() => { authService.me().then(({ user: next }) => setUser(next)).catch(() => localStorage.removeItem("ppl_token")).finally(() => setLoading(false)); }, []);
+  useEffect(() => { authService.me().then(({ user: next }) => { setUser(next); if (!next) localStorage.removeItem("ppl_token"); }).catch(() => localStorage.removeItem("ppl_token")).finally(() => setLoading(false)); }, []);
   async function login(data) { const result = await authService.login(data); localStorage.setItem("ppl_token", result.token); setUser(result.user); return result.user; }
   async function register(data) { const result = await authService.register(data); localStorage.setItem("ppl_token", result.token); setUser(result.user); return result.user; }
   async function forgotPassword(data) { const result = await authService.forgotPassword(data); localStorage.setItem("ppl_token", result.token); setUser(result.user); return result.user; }

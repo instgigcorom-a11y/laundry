@@ -1,3 +1,4 @@
+import '../app.css';
 import { useEffect, useRef, useState } from "react";
 import { Button, Field, Status } from "../components/common";
 import { shopService } from "../services/shopService";

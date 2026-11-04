@@ -32,6 +32,7 @@ export default defineConfig({
 	plugins: [react(), tailwindcss(), previewRoutes()],
 	// Keep every React consumer on the same runtime instance.
 	resolve: { dedupe: ["react", "react-dom"] },
+	build: { sourcemap: true },
 	server: {
 		proxy: {
 			"/api": "http://localhost:8080",

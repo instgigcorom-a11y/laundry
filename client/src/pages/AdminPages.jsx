@@ -1,3 +1,4 @@
+import '../app.css';
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { shopService } from "../services/shopService";

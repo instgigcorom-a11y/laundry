@@ -173,7 +173,51 @@ Final image prompt:
 
 > Create a website hero PHOTOGRAPH ASSET only, based on the photographic right-hand portion of the reference homepage image. No website UI, no text, no logos, no typography, no cards, no buttons. Square or portrait composition: neatly folded forest green cotton shirt on top of ivory and beige terry towels on a pale marble counter, soft sunlit laundry room with white front-load washer, warm light oak cabinetry, small leafy green plants, a few hanging forest-green and ivory shirts in background. Premium calm editorial product photography, realistic woven cotton and towel texture, warm cream sage and dark forest-green palette. Main folded stack foreground on right-center, washer background left-center. Natural depth of field and soft daylight. Full image photographic without graphic framing or decorations. This is illustrative laundry photography, not a photograph of the actual shop.
 
-### Live checks
+### PageSpeed improvements
+
+The homepage uses responsive WebP images (480, 768 and 1145 px) instead of the
+2.2 MiB source PNG, with matching `srcset`/`sizes`, correct intrinsic dimensions
+and high fetch priority. The source PNG remains available for regeneration;
+`npm run optimize:images` recreates the WebP variants and the 76 px WhatsApp icon.
+The browser does not request the source PNG. The WebP hero variants are about
+35, 76 and 135 KB, and the chat icon is about 1.5 KB.
+
+Auth, customer and admin pages are lazy-loaded along with their application CSS.
+Socket.IO and admin alerts load only for admins. PDF generation and the phone
+input library are no longer part of the homepage entry bundle. Shared public
+styles remain in `src/index.css`; app-only rules are in `src/app.css`. Fonts are
+self-hosted under `public/fonts` with their Open Font License files; the Google
+Fonts CSS import and the unused DM Sans download have been removed. Entry JS
+is about 92 KB gzipped and entry CSS about 7.6 KB gzipped, compared with roughly
+353 KB and 39 KB in the supplied report. Production source maps are emitted.
+The primary WhatsApp button and floating chat label use darker backgrounds to
+pass text contrast checks.
+
+Deploy **both frontend and backend** for the anonymous-session fix. The public
+`GET /api/auth/me` now returns HTTP 200 with `{ "user": null }` for a guest,
+with `Cache-Control: no-store`. Cookie and bearer sessions are still supported;
+protected operations continue to require authentication and return 401 when
+needed. `node --test test/session.test.cjs` in `server` checks these cases with
+fixtures and no database connection.
+
+`public/.well-known/ard.json` and `ai-catalog.json` are real JSON manifests
+with empty entries, accurately declaring that no AI tools are offered. The
+discovery paths no longer fall through to the HTML app shell. `public/llms.txt`
+lists public business pages and confirmation requirements without promising
+search rankings or advertising nonexistent tools.
+
+Run `npm run audit:pagespeed` from `client` for local desktop/mobile Lighthouse
+reports. It uses an installed Edge browser (or `BROWSER_BIN`) and the real
+anonymous session handler in an isolated local API, without starting MongoDB.
+JSON/HTML reports are saved under `node_modules/.cache/ppl-performance/`.
+Local scores are diagnostic and will differ from live PageSpeed measurements
+due to hosting, network latency, backend cold starts and audit-version changes.
+Lighthouse is pinned to 13.5.0; compatible dependency security fixes are locked.
+Repeat live PageSpeed tests after deployment. The browser regression also checks
+that homepage requests exclude the app/PDF/phone chunks and legacy PNG/font URLs,
+and that the lazy login and catalogue routes still work.
+
+### Live checks after deployment
 
 1. Open `https://pplwash.in` and log in.
 2. In browser DevTools, confirm API requests go to `https://laundry-backend-pokh.onrender.com/api/...`.

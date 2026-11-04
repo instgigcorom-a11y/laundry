@@ -3,6 +3,8 @@ import { spawn } from 'node:child_process';
 import { mkdir, readFile, writeFile, access } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { preview } from 'vite';
+import { startLocalSessionServer } from './local-session-server.mjs';
+import { starterCatalog } from '../src/data/starterCatalog.js';
 
 // Uses an installed Chromium browser; does not install packages or browsers.
 const candidates = [process.env.BROWSER_BIN, 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', 'C:/Program Files/Google/Chrome/Application/chrome.exe'].filter(Boolean);
@@ -12,7 +14,8 @@ assert.ok(browser, 'Set BROWSER_BIN to an installed Chromium browser.');
 const artifacts = resolve('node_modules/.cache/ppl-homepage-qa');
 const profile = resolve(artifacts, `profile-${Date.now()}`);
 await mkdir(profile, { recursive: true });
-const server = await preview({ preview: { host: '127.0.0.1', port: 0, open: false } });
+const session = await startLocalSessionServer({ products: starterCatalog });
+const server = await preview({ preview: { host: '127.0.0.1', port: 0, open: false, proxy: { '/api': session.target } } });
 const origin = `http://127.0.0.1:${server.httpServer.address().port}`;
 const processHandle = spawn(browser, ['--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check', '--remote-debugging-port=0', `--user-data-dir=${profile}`, 'about:blank'], { windowsHide: true, stdio: 'ignore' });
 let socket;
@@ -49,7 +52,7 @@ try {
     return result.result.value;
   };
   const waitFor = async expression => {
-    for (let attempt = 0; attempt < 100; attempt++) { if (await evaluate(expression)) return; await pause(100); }
+    for (let attempt = 0; attempt < 100; attempt++) { if (await evaluate(`Boolean(${expression})`)) return; await pause(100); }
     throw new Error(`Timed out waiting for ${expression}`);
   };
   await send('Runtime.enable');
@@ -74,6 +77,9 @@ try {
     assert.equal(layout.cards, 4); assert.equal(layout.columns, width <= 560 ? 2 : 4);
     assert.ok(layout.cardsFit); assert.equal(layout.faqs, 10); assert.equal(layout.login, '/login');
     assert.equal(layout.heading, 'Laundry & Dry Cleaning in Amritsar');
+    const resources = await evaluate('performance.getEntriesByType("resource").map(entry => entry.name)');
+    assert.ok(!resources.some(url => /fonts\.(googleapis|gstatic)\.com|home-laundry-hero\.png|whatsapp-icon\.png/.test(url)), 'legacy image/font requests on homepage');
+    assert.ok(!resources.some(url => /\/(AdminPages|CustomerPages|AuthPages|invoicePdf|phone|common|AdminOrderNotifier)-[^/]+\.(js|css)/.test(url)), 'app chunks were eagerly loaded on homepage');
     if ([1440, 390].includes(width)) {
       const screenshot = await send('Page.captureScreenshot', { format: 'png' });
       await writeFile(resolve(artifacts, `homepage-${width}.png`), Buffer.from(screenshot.data, 'base64'));
@@ -94,12 +100,20 @@ try {
   await waitFor('document.querySelector(\'a[href="/#faqs"]\')');
   await evaluate('document.querySelector(\'a[href="/#faqs"]\').click()');
   await waitFor('location.pathname === "/" && location.hash === "#faqs" && scrollY > 200');
+  await evaluate('document.querySelector(\'.landing-login\').click()');
+  await waitFor('location.pathname === "/login" && document.querySelector(\'input[type="password"]\')');
+  assert.ok(await evaluate('!![...document.styleSheets].find(sheet => sheet.href?.includes("common-"))'), 'lazy app stylesheet not loaded');
+  await send('Page.navigate', { url: origin + '/products' });
+  await waitFor('document.querySelector(".add-service") && document.querySelector(".service-price")');
+  await evaluate('document.querySelector(".add-service").click()');
+  await waitFor('location.pathname === "/login" && document.querySelector(\'input[type="password"]\')');
   assert.deepEqual(exceptions, [], 'Uncaught browser exceptions');
-  console.log('PASS service-card navigation, area-to-home FAQ anchor and browser hydration');
+  console.log('PASS deferred app chunks, local fonts, responsive WebP images, login/catalogue routes, service-card navigation and FAQ anchor');
   console.log(`Screenshots: ${artifacts}`);
   await send('Browser.close');
 } finally {
   socket?.close();
   if (processHandle.exitCode === null) processHandle.kill();
   await new Promise(resolve => server.httpServer.close(resolve));
+  await session.close();
 }

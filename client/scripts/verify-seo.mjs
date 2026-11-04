@@ -46,6 +46,12 @@ try {
       else assert.ok(/^(https:\/\/|tel:|mailto:|#)/.test(href), `unexpected link ${href}`);
     }
     for (const match of html.matchAll(/<(?:script|img)\b[^>]*src="(\/[^\"]+)"/g)) localAssets.add(decode(match[1]));
+    for (const match of html.matchAll(/\bsrcset="([^"]+)"/g)) {
+      for (const candidate of decode(match[1]).split(',')) {
+        const path = candidate.trim().split(/\s+/)[0];
+        if (path.startsWith('/')) localAssets.add(path);
+      }
+    }
     for (const match of html.matchAll(/<link\b[^>]*href="(\/[^\"]+)"/g)) localAssets.add(decode(match[1]));
     const head = html.match(/<head>([\s\S]*?)<\/head>/)[1];
     const title = decode(head.match(/<title>(.*?)<\/title>/)[1]);
@@ -175,6 +181,20 @@ try {
   const robots = await fetch(origin + '/robots.txt');
   assert.equal(robots.status, 200);
   assert.ok((await robots.text()).includes(`Sitemap: ${SITE_URL}/sitemap.xml`));
+  for (const path of ['/.well-known/ard.json', '/.well-known/ai-catalog.json']) {
+    const response = await fetch(origin + path);
+    assert.equal(response.status, 200, `missing agent discovery document ${path}`);
+    assert.ok(response.headers.get('content-type')?.includes('application/json'));
+    const manifest = await response.json();
+    assert.deepEqual(manifest.entries, [], 'do not advertise nonexistent AI tools');
+    if (path.includes('ai-catalog')) assert.equal(manifest.specVersion, '1.0');
+  }
+  const llms = await fetch(origin + '/llms.txt');
+  assert.equal(llms.status, 200);
+  assert.ok(llms.headers.get('content-type')?.includes('text/plain'));
+  const llmsText = await llms.text();
+  assert.ok(llmsText.startsWith('# Prem Power Laundry'));
+  assert.ok(llmsText.includes('[Contact](https://pplwash.in/contact/)'));
   console.log(`PASS ${localLinks.size} local link destinations and ${localAssets.size} local assets; sitemap has exactly ${expectedUrls.length} URLs; robots.txt points to sitemap`);
   console.log('PASS 10 visible clickable service tags on all 54 public pages, 8 service guides with rates and FAQs');
   console.log('PASS 39 linked area pages with unique enquiry tips, map origins, WhatsApp enquiries and coverage notes');

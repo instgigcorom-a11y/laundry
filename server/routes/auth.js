@@ -3,7 +3,7 @@ const express = require("express");
 const User = require("../models/User");
 const S = require("../services/security");
 const Phone = require("../services/phone");
-const { publicUser, setSessionCookie, clearSessionCookie, requireAuth } = require("../middleware/auth");
+const { publicUser, setSessionCookie, clearSessionCookie, requireAuth, authenticate } = require("../middleware/auth");
 const router = express.Router();
 
 function addressFrom(input) {
@@ -85,6 +85,14 @@ router.post("/forgot-password", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.get("/me", requireAuth, (req, res) => res.json({ user: publicUser(req.user) }));
+// Session discovery is public; protected operations still use requireAuth.
+// Anonymous visits are an ordinary state, not a failed request in the browser.
+router.get("/me", async (req, res, next) => {
+  res.set("Cache-Control", "no-store");
+  try {
+    const user = await authenticate(req);
+    res.json({ user: user ? publicUser(user) : null });
+  } catch (error) { next(error); }
+});
 router.post("/logout", (req, res) => { clearSessionCookie(res); res.json({ ok: true }); });
 module.exports = router;
