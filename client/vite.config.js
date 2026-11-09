@@ -17,6 +17,10 @@ function previewRoutes() {
 					return response.end();
 				}
 				// Mirror the deployment fallback for existing interactive routes.
+				if (/^\/products\/?$/.test(url.pathname)) {
+					response.setHeader("Content-Type", "text/html; charset=utf-8");
+					return response.end(readFileSync(resolve(server.config.root, server.config.build.outDir, "products/index.html")));
+				}
 				if (/^\/(products|login|register|forgot-password|cart|schedule|addresses|payment-method|confirmation|orders|account|payment|admin)(\/|$)/.test(url.pathname)) {
 					response.setHeader("Content-Type", "text/html; charset=utf-8");
 					return response.end(readFileSync(resolve(server.config.root, server.config.build.outDir, "app.html")));

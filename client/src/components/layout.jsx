@@ -58,19 +58,19 @@ export function Layout({ children }) {
       <div className="site-footer-location">
         <b>Visit our shop</b>
         <address>{SHOP_ADDRESS}</address>
-        <a className="footer-phone" href={`tel:${SHOP_PHONE_TEL}`}>{SHOP_PHONE}</a>
+        <a className="footer-phone" data-conversion="call" href={`tel:${SHOP_PHONE_TEL}`}>{SHOP_PHONE}</a>
       </div>
       <nav className="site-footer-links" aria-label="Shop links">
         <a href={SHOP_MAP_URL} target="_blank" rel="noreferrer">Get directions</a>
         <a href={SHOP_REVIEW_URL} target="_blank" rel="noreferrer">Review us on Google</a>
         <a href={SHOP_INSTAGRAM_URL} target="_blank" rel="noreferrer">Follow on Instagram</a>
-        <a href={SHOP_WHATSAPP_URL} target="_blank" rel="noreferrer">Chat on WhatsApp</a>
+        <a data-conversion="whatsapp" href={SHOP_WHATSAPP_URL} target="_blank" rel="noreferrer">Chat on WhatsApp</a>
       </nav>
       <nav className="site-footer-pages" aria-label="Services and shop information">
         {primaryPublicPages.map(page => <Link key={page.path} to={page.path} aria-current={path.replace(/\/+$/, "") === page.path.replace(/\/+$/, "") ? "page" : undefined}>{page.label}</Link>)}
       </nav>
     </footer>}
-    {!admin && <a className={`whatsapp-float ${user ? "with-mobile-nav" : ""}`} href={SHOP_WHATSAPP_URL} target="_blank" rel="noreferrer" aria-label={`Chat with Prem Power Laundry on WhatsApp at ${SHOP_PHONE}`}><img src="/whatsapp-icon.webp" width="38" height="38" alt="" aria-hidden="true" /><b>Chat</b></a>}
+    {!admin && <a className={`whatsapp-float ${user ? "with-mobile-nav" : ""}`} data-conversion="whatsapp" href={SHOP_WHATSAPP_URL} target="_blank" rel="noreferrer" aria-label={`Chat with Prem Power Laundry on WhatsApp at ${SHOP_PHONE}`}><img src="/whatsapp-icon.webp" width="38" height="38" alt="" aria-hidden="true" /><b>Chat</b></a>}
     {user && !admin && <nav className="mobile-nav" aria-label="Mobile navigation">
       <MobileLink to="/" label="Home" marker="H" active={path === "/"} />
       <MobileLink to="/products" label="Rates" marker="R" active={path.startsWith("/products")} />

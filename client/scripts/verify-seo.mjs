@@ -21,7 +21,7 @@ const contentSamples = {
   '/': 'Choose care for your everyday clothes',
   '/laundry-service-amritsar/': 'Choose the service based on whether you need pressing included.',
   '/dry-cleaning-amritsar/': 'Selected garment dry cleaning rates',
-  '/areas-we-serve/': 'These 39 candidate nearby areas',
+  '/areas-we-serve/': 'These 39 nearby Amritsar areas',
   '/pricing/': 'Use our published rate card to compare laundry',
   '/about/': 'Prem Power Laundry is based at Shop no. 4',
   '/contact/': 'Help us answer your enquiry',
@@ -60,7 +60,36 @@ try {
     const description = decode(head.match(/<meta name="description" content="([^"]*)"/)[1]);
     assert.equal(description, page.description);
     assert.ok(head.includes(`href="${SITE_URL}${page.path}"`), 'canonical missing');
-    const business = JSON.parse(head.match(/<script type="application\/ld\+json">(.*?)<\/script>/)[1]);
+    assert.equal((head.match(/rel="canonical"/g) || []).length, 1, 'duplicate canonical');
+    assert.ok(head.includes('content="index, follow"'), 'public page must stay indexable');
+    assert.ok(!head.includes('noindex'), 'public page accidentally noindex');
+    const schema = JSON.parse(head.match(/<script type="application\/ld\+json"[^>]*>(.*?)<\/script>/)[1]);
+    assert.equal(schema['@context'], 'https://schema.org');
+    const business = schema['@graph'].find(entity => entity['@type'] === 'DryCleaningOrLaundry');
+    assert.equal(business['@id'], `${SITE_URL}/#business`);
+    assert.equal(schema['@graph'].filter(entity => entity['@id'] === business['@id']).length, 1);
+    assert.ok(!JSON.stringify(schema).includes('aggregateRating'));
+    const service = schema['@graph'].find(entity => entity['@type'] === 'Service');
+    if (page.intro || ['/laundry-service-amritsar/', '/dry-cleaning-amritsar/'].includes(page.path)) {
+      assert.equal(service.provider['@id'], business['@id']);
+      assert.equal(service.url, SITE_URL + page.path);
+      assert.equal(service.name, page.h1);
+    } else assert.ok(!service);
+    const trail = schema['@graph'].find(entity => entity['@type'] === 'BreadcrumbList');
+    if (page.path !== '/') {
+      assert.equal(trail.itemListElement.at(-1).item, SITE_URL + page.path);
+      assert.equal(trail.itemListElement[0].item, SITE_URL + '/');
+      assert.ok(html.includes('aria-label="Breadcrumb"'));
+    }
+    for (const [attribute, key, expected] of [['property', 'og:title', page.title], ['property', 'og:description', page.description], ['property', 'og:url', SITE_URL + page.path], ['property', 'og:type', 'website'], ['property', 'og:site_name', 'Prem Power Laundry'], ['name', 'twitter:card', 'summary_large_image'], ['name', 'twitter:title', page.title], ['name', 'twitter:description', page.description]]) {
+      const tags = [...head.matchAll(new RegExp(`<meta ${attribute}="${key}" content="([^"]*)"`, 'g'))];
+      assert.equal(tags.length, 1, `missing or duplicate ${key}`);
+      assert.equal(decode(tags[0][1]), expected);
+    }
+    const sharingImage = head.match(/property="og:image" content="([^"]+)"/)[1];
+    assert.equal(sharingImage, `${SITE_URL}/images/ppl-wash-social.jpg`);
+    assert.ok(head.includes(`name="twitter:image" content="${sharingImage}"`));
+    localAssets.add(new URL(sharingImage).pathname);
     assert.equal(business.telephone, '+918146099396');
     assert.equal(business['@type'], 'DryCleaningOrLaundry');
     assert.equal(business.address.postalCode, '143001');
@@ -159,10 +188,19 @@ try {
   const app = await readFile('dist/app.html', 'utf8');
   assert.ok(app.includes('<div id="root"></div>'), 'existing routes need an unrendered app shell');
   assert.ok((await readFile('dist/_redirects', 'utf8')).includes('/* /app.html 200'));
-  for (const path of ['/products', '/products/', '/login', '/cart', '/orders', '/admin']) {
+  assert.ok(app.includes('content="noindex, follow"'), 'utility shell must not be indexed');
+  for (const path of ['/login', '/register', '/forgot-password', '/cart', '/orders', '/admin']) {
     const response = await fetch(origin + path);
     assert.equal(response.status, 200);
     assert.equal(await response.text(), app, `existing app route ${path}`);
+  }
+  for (const path of ['/products', '/products/']) {
+    const response = await fetch(origin + path);
+    assert.equal(response.status, 200);
+    const html = await response.text();
+    assert.ok(html.includes('content="index, follow"'), 'catalogue must remain indexable');
+    assert.ok(html.includes(`rel="canonical" href="${SITE_URL}/products/"`));
+    assert.ok(html.includes('<div id="root"></div>'), 'catalogue must keep its interactive shell');
   }
   for (const path of localLinks) {
     const response = await fetch(origin + path);

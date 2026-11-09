@@ -79,6 +79,21 @@ precedence. On Nginx, use `try_files $uri $uri/ /app.html;` with `index index.ht
 Keep `/products/` and all existing account, booking and admin routes available.
 No existing public URL was replaced, so no replacement redirects are required.
 
+The SEO update also generates `products/index.html`, an **indexable interactive
+catalogue shell** with its own canonical and social metadata. Keep this file
+ahead of the fallback. `app.html` now has `noindex, follow` for account, login,
+booking and admin URLs. Never rewrite public pages or `/products/` to that
+utility shell. Public pre-rendered pages have `index, follow`. Route metadata
+also updates after React navigation, removing public schema from utility pages.
+Deploy the complete output together so these templates remain consistent.
+
+Page-specific Open Graph, Twitter/X metadata and connected JSON-LD are generated
+from `client/src/data/seo.js`. The social image reuses the existing homepage
+illustration and official logo; `npm run optimize:images` recreates it. See
+`SEO-REPORT.md` for the implementation inventory, checks and remaining live-host
+validation. HTTP-to-HTTPS and www-to-non-www redirects must be verified on the
+actual domain host; no DNS or hosting configuration was changed by this update.
+
 After building, run `npm run verify:seo` from `client`. This starts a temporary
 Vite production preview and checks direct HTTP responses for all fifty-four public
 pages, including their slashless variants, without executing client JavaScript.

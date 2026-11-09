@@ -96,12 +96,28 @@ try {
   await waitFor('document.querySelector(".landing-service-4")');
   await evaluate('document.querySelector(".landing-service-4").click()');
   await waitFor('location.pathname === "/steam-press-amritsar/" && document.querySelector("h1")?.textContent === "Steam Press & Ironing in Amritsar"');
+  assert.ok(await evaluate(`document.querySelector('meta[property="og:url"]').content.endsWith('/steam-press-amritsar/')`), 'social metadata stale after React navigation');
+  assert.equal(await evaluate(`document.querySelectorAll('link[rel="canonical"]').length`), 1);
+  assert.ok(await evaluate(`JSON.parse(document.querySelector('script[data-page-schema]').textContent)['@graph'].some(entity => entity['@type'] === 'Service' && entity.url.endsWith('/steam-press-amritsar/'))`));
+  const enquiry = await evaluate(`document.querySelector('main a[data-conversion="whatsapp"]').href`);
+  assert.ok(new URL(enquiry).searchParams.get('text').includes('steam pressing'));
+  await evaluate(`document.querySelector('main a[data-conversion="pricing"]').click()`);
+  await waitFor('location.pathname === "/pricing/" && location.hash === "#everyday" && document.querySelector("#everyday")');
+  for (const path of ['/pricing/', '/dry-cleaning-amritsar/', '/laundry-service-amritsar/', '/shoe-cleaning-amritsar/', '/areas-we-serve/']) {
+    await send('Page.navigate', { url: origin + path });
+    await waitFor('document.readyState === "complete" && document.querySelector("main h1")');
+    const sizes = await evaluate('({ width: innerWidth, scroll: document.documentElement.scrollWidth })');
+    assert.ok(sizes.scroll <= sizes.width, `Public page overflow: ${path}`);
+    assert.equal(await evaluate(`document.querySelectorAll('meta[property="og:title"]').length`), 1);
+  }
   await send('Page.navigate', { url: origin + '/areas-we-serve/azad-nagar/' });
   await waitFor('document.querySelector(\'a[href="/#faqs"]\')');
   await evaluate('document.querySelector(\'a[href="/#faqs"]\').click()');
   await waitFor('location.pathname === "/" && location.hash === "#faqs" && scrollY > 200');
   await evaluate('document.querySelector(\'.landing-login\').click()');
   await waitFor('location.pathname === "/login" && document.querySelector(\'input[type="password"]\')');
+  assert.equal(await evaluate(`document.querySelector('meta[name="robots"]').content`), 'noindex, follow');
+  assert.equal(await evaluate(`document.querySelectorAll('link[rel="canonical"],script[data-page-schema],meta[property^="og:"]').length`), 0, 'public metadata leaked into login');
   assert.ok(await evaluate('!![...document.styleSheets].find(sheet => sheet.href?.includes("common-"))'), 'lazy app stylesheet not loaded');
   await send('Page.navigate', { url: origin + '/products' });
   await waitFor('document.querySelector(".add-service") && document.querySelector(".service-price")');

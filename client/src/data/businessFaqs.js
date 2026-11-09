@@ -26,7 +26,7 @@ export const businessFaqs = [
   },
   {
     question: 'Can I arrange laundry pickup and delivery from my area in Amritsar?',
-    answer: 'Contact the shop with your full address, landmark or map pin, and the items you need cleaned. Our areas directory lists 39 candidate nearby areas with approximate distance bands. Listing an area does not guarantee pickup at every address; confirm coverage, collection arrangements and any charges before booking.',
+    answer: 'Contact the shop with your full address, landmark or map pin, and the items you need cleaned. Our areas directory lists 39 nearby Amritsar areas with approximate distance bands. Listing an area does not guarantee pickup at every address; confirm coverage, collection arrangements and any charges before booking.',
     path: '/areas-we-serve/', link: 'Find your area and confirm coverage',
   },
   {
