@@ -1,5 +1,5 @@
 import { localBusiness, publicPages, SITE_URL } from './publicPages.js';
-import { SHOP_INSTAGRAM_URL } from './shopDetails.js';
+import { SHOP_INSTAGRAM_URL, SHOP_REVIEW_URL } from './shopDetails.js';
 
 export const SOCIAL_IMAGE = `${SITE_URL}/images/ppl-wash-social.jpg`;
 export const isServicePage = page => Boolean(page.intro) || ['/laundry-service-amritsar/', '/dry-cleaning-amritsar/'].includes(page.path);
@@ -26,7 +26,7 @@ export function breadcrumbs(page) {
 export function structuredData(page) {
   const url = SITE_URL + page.path;
   const trail = breadcrumbs(page);
-  const graph = [{ ...localBusiness, logo: `${SITE_URL}/prem-power-laundry-logo.svg`, image: SOCIAL_IMAGE, sameAs: [SHOP_INSTAGRAM_URL.split('?')[0]] }];
+  const graph = [{ ...localBusiness, logo: `${SITE_URL}/prem-power-laundry-logo.svg`, image: SOCIAL_IMAGE, sameAs: [SHOP_INSTAGRAM_URL.split('?')[0], SHOP_REVIEW_URL] }];
   graph.push({ '@type': 'WebSite', '@id': `${SITE_URL}/#website`, url: `${SITE_URL}/`, name: 'Prem Power Laundry', publisher: { '@id': localBusiness['@id'] } });
   graph.push({ '@type': 'WebPage', '@id': `${url}#webpage`, url, name: page.title, description: page.description, isPartOf: { '@id': `${SITE_URL}/#website` }, about: { '@id': localBusiness['@id'] }, ...(trail.length ? { breadcrumb: { '@id': `${url}#breadcrumb` } } : {}) });
   if (trail.length) graph.push({ '@type': 'BreadcrumbList', '@id': `${url}#breadcrumb`, itemListElement: trail.map((item, index) => ({ '@type': 'ListItem', position: index + 1, name: item.name, item: SITE_URL + item.path })) });

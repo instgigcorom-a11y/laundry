@@ -8,7 +8,7 @@ import { GoogleTranslate } from "./GoogleTranslate";
 
 
 
-import { SHOP_ADDRESS, SHOP_INSTAGRAM_URL, SHOP_MAP_URL, SHOP_PHONE, SHOP_PHONE_TEL, SHOP_REVIEW_URL, SHOP_WHATSAPP_URL } from "../data/shopDetails";
+import { SHOP_ADDRESS, SHOP_HOURS, SHOP_INSTAGRAM_URL, SHOP_MAP_URL, SHOP_PHONE, SHOP_PHONE_TEL, SHOP_REVIEW_URL, SHOP_WHATSAPP_URL } from "../data/shopDetails";
 
 import { primaryPublicPages } from '../data/publicPages.js';
 import { ServiceTags } from './ServiceTags.jsx';
@@ -58,6 +58,7 @@ export function Layout({ children }) {
       <div className="site-footer-location">
         <b>Visit our shop</b>
         <address>{SHOP_ADDRESS}</address>
+        <p>Open daily: {SHOP_HOURS}</p>
         <a className="footer-phone" data-conversion="call" href={`tel:${SHOP_PHONE_TEL}`}>{SHOP_PHONE}</a>
       </div>
       <nav className="site-footer-links" aria-label="Shop links">

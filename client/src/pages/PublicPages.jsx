@@ -4,7 +4,7 @@ import { starterCatalog, rateCategories } from '../data/starterCatalog.js';
 import { areaGroups, areaPages } from '../data/publicPages.js';
 import { AreaContent } from '../components/AreaContent.jsx';
 import { BusinessFaqs } from '../components/BusinessFaqs.jsx';
-import { SHOP_ADDRESS, SHOP_MAP_URL, SHOP_PHONE, SHOP_PHONE_TEL } from '../data/shopDetails.js';
+import { SHOP_ADDRESS, SHOP_HOURS, SHOP_MAP_URL, SHOP_PHONE, SHOP_PHONE_TEL } from '../data/shopDetails.js';
 import { HomeLanding } from '../components/HomeLanding.jsx';
 import { breadcrumbs, pricingAnchor } from '../data/seo.js';
 
@@ -90,7 +90,7 @@ export function PublicContentPage({ page }) {
     </>}
     {path === '/contact/' && <>
       <p>Contact Prem Power Laundry about a service, a rate or a visit to our Amritsar shop. For pickup enquiries, share your full address so we can confirm coverage.</p>
-      <article className="shop-card"><div><p className="eyebrow">Visit our shop</p><h2>Prem Power Laundry</h2><address>{SHOP_ADDRESS}</address><p><a href={`tel:${SHOP_PHONE_TEL}`}>{SHOP_PHONE}</a></p></div><a href={SHOP_MAP_URL} target="_blank" rel="noreferrer">Get directions</a></article>
+      <article className="shop-card"><div><p className="eyebrow">Visit our shop</p><h2>Prem Power Laundry</h2><address>{SHOP_ADDRESS}</address><p>Open daily: {SHOP_HOURS}</p><p><a href={`tel:${SHOP_PHONE_TEL}`}>{SHOP_PHONE}</a></p></div><a href={SHOP_MAP_URL} target="_blank" rel="noreferrer">Get directions</a></article>
       <Actions page={page} /><h2>Help us answer your enquiry</h2><p>Include the service you need, the garment or item type and the quantity or approximate laundry weight. For collection, include your area and landmark. For an existing order, have your order number ready.</p>
       <h2>Planning a visit</h2><p>Call or WhatsApp to confirm opening hours and arrangements before travelling. Use the directions link to locate the shop in Gurlal Bazar.</p>
       <p>See <Link to="/pricing/">pricing</Link> or <Link to="/products">the live catalogue</Link> before booking.</p>

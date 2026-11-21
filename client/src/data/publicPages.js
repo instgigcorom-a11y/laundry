@@ -28,6 +28,14 @@ export const localBusiness = {
   '@id': `${SITE_URL}/#business`, name: 'Prem Power Laundry', url: `${SITE_URL}/`,
   telephone: SHOP_PHONE_TEL, hasMap: SHOP_MAP_URL,
   address: { '@type': 'PostalAddress', streetAddress: 'Shop no. 4, New Partap Nagar Maine, Gurlal Bazar, East Gobind Nagar, Pratap Nagar', addressLocality: 'Amritsar', addressRegion: 'Punjab', postalCode: '143001', addressCountry: 'IN' },
+  geo: { '@type': 'GeoCoordinates', latitude: 31.6150146, longitude: 74.9007783 },
+  areaServed: { '@type': 'City', name: 'Amritsar' },
+  openingHoursSpecification: [{
+    '@type': 'OpeningHoursSpecification',
+    dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+    opens: '08:30',
+    closes: '22:00',
+  }],
 };
 
 export function findPublicPage(path) {

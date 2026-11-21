@@ -93,7 +93,12 @@ try {
     assert.equal(business.telephone, '+918146099396');
     assert.equal(business['@type'], 'DryCleaningOrLaundry');
     assert.equal(business.address.postalCode, '143001');
-    assert.ok(!business.openingHours && !business.aggregateRating && !business.areaServed);
+    assert.ok(!business.aggregateRating);
+    assert.equal(business.areaServed.name, 'Amritsar');
+    assert.equal(business.geo.latitude, 31.6150146);
+    assert.equal(business.geo.longitude, 74.9007783);
+    assert.equal(business.openingHoursSpecification[0].opens, '08:30');
+    assert.equal(business.openingHoursSpecification[0].closes, '22:00');
     const main = html.match(/<main\b[^>]*>([\s\S]*?)<\/main>/)[1];
     assert.equal((main.match(/<h1[ >]/g) || []).length, 1);
     assert.equal(decode(main.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/)[1]), page.h1);
