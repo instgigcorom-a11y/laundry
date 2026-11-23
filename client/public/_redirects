@@ -52,5 +52,6 @@
 /areas-we-serve/pawan-nagar /areas-we-serve/pawan-nagar/ 301
 /areas-we-serve/preet-nagar /areas-we-serve/preet-nagar/ 301
 /areas-we-serve/shivala-colony /areas-we-serve/shivala-colony/ 301
-# Existing files take precedence over the client app fallback.
-/* /app.html 200
+# Order-specific app routes
+/confirmation/:id /app.html 200
+/payment/:id /app.html 200

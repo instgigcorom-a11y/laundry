@@ -7,6 +7,13 @@ const muted = rgb(0.36, 0.43, 0.49);
 const pale = rgb(0.93, 0.97, 1);
 
 const money = (value) => `Rs ${Number(value || 0).toFixed(2)}`;
+const billingContact = (customer = {}) => ({
+  name: customer.gstName || customer.name || "Customer",
+  gstin: customer.gstin ? `GSTIN: ${customer.gstin}` : "",
+  address: customer.gstAddress || customer.address,
+  phone: customer.phone,
+  email: customer.email,
+});
 const clean = (value) => String(value == null ? "" : value).replace(/[^\x20-\x7E]/g, " ").replace(/\s+/g, " ").trim();
 
 function fitText(text, maxWidth, font, size) {
@@ -59,9 +66,11 @@ export async function createInvoicePdf(invoice, billing = {}) {
   y -= 65;
 
   draw("BILL TO", left, y, 7.5, bold, blue);
-  draw(invoice.customer?.name || "Customer", left, y - 16, 11, bold);
-  const customerLines = fitText([invoice.customer?.phone, invoice.customer?.email, invoice.customer?.address].filter(Boolean).join(" | ") || "No contact details", contentWidth * 0.66, regular, 8);
-  customerLines.slice(0, 2).forEach((text, index) => draw(text, left, y - 30 - index * 11, 8, regular, muted));
+  const customer = billingContact(invoice.customer);
+  draw(fitText(customer.name, contentWidth * 0.66, bold, 11)[0], left, y - 16, 11, bold);
+  if (customer.gstin) draw(customer.gstin, left, y - 28, 8, regular, muted);
+  const customerLines = fitText([customer.address, customer.phone, customer.email].filter(Boolean).join(" | ") || "No contact details", contentWidth * 0.66, regular, 8);
+  customerLines.slice(0, 2).forEach((text, index) => draw(text, left, y - (customer.gstin ? 39 : 30) - index * 11, 8, regular, muted));
   draw(`Total garments: ${Number(invoice.garmentCount || 0)}`, right - 125, y - 16, 9, bold, ink);
   if (invoice.sourceOrderId) draw(`Order: ${clean(invoice.orderNumber || invoice.sourceOrderId)}`, right - 125, y - 31, 8, regular, muted);
   y -= 58;
@@ -154,8 +163,10 @@ export async function createInvoicePng(invoice, billing = {}) {
   ctx.textAlign = "right"; ctx.fillStyle = navy; ctx.font = "700 17px Archivo, Arial"; ctx.fillText("FRESH CARE EVERYDAY", 1020, 88); ctx.fillStyle = muted; ctx.fillText(billing.phone || "+91 81460 99396", 1020, 118); ctx.textAlign = "left";
   ctx.fillStyle = navy; ctx.fillRect(60, 180, 960, 88); ctx.fillStyle = "#fff"; ctx.font = "800 15px Archivo, Arial"; ctx.fillText("ORDER CONFIRMATION", 85, 215); ctx.font = "800 30px Archivo, Arial"; ctx.fillText(clean(invoice.number || "Invoice"), 85, 250);
   ctx.textAlign = "right"; ctx.font = "600 17px Archivo, Arial"; ctx.fillText(new Date(invoice.invoiceDate || Date.now()).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }), 995, 230); ctx.textAlign = "left";
-  let y = 325; ctx.fillStyle = sky; ctx.font = "800 14px Archivo, Arial"; ctx.fillText("BILL TO", 65, y); ctx.fillStyle = ink; ctx.font = "800 24px Archivo, Arial"; ctx.fillText(clean(invoice.customer?.name || "Customer"), 65, y + 36);
-  ctx.fillStyle = muted; ctx.font = "500 15px Archivo, Arial"; canvasLines(ctx, [invoice.customer?.phone, invoice.customer?.address].filter(Boolean).join(" | ") || "No contact details", 620).slice(0, 2).forEach((entry, index) => ctx.fillText(entry, 65, y + 64 + index * 22));
+  const customer = billingContact(invoice.customer);
+  let y = 325; ctx.fillStyle = sky; ctx.font = "800 14px Archivo, Arial"; ctx.fillText("BILL TO", 65, y); ctx.fillStyle = ink; ctx.font = "800 24px Archivo, Arial"; ctx.fillText(clean(customer.name), 65, y + 36, 620);
+  ctx.fillStyle = muted; ctx.font = "500 15px Archivo, Arial"; if (customer.gstin) ctx.fillText(clean(customer.gstin), 65, y + 55);
+  canvasLines(ctx, [customer.address, customer.phone].filter(Boolean).join(" | ") || "No contact details", 620).slice(0, 2).forEach((entry, index) => ctx.fillText(entry, 65, y + (customer.gstin ? 76 : 64) + index * 22));
   ctx.textAlign = "right"; ctx.fillStyle = ink; ctx.font = "700 16px Archivo, Arial"; ctx.fillText(`Order: ${clean(invoice.orderNumber || invoice.number || invoice.sourceOrderId || "-")}`, 1015, y + 35); ctx.fillText(`Garments: ${Number(invoice.garmentCount || 0)}`, 1015, y + 63); ctx.textAlign = "left";
   y += 120; ctx.fillStyle = "#e9f3fb"; ctx.fillRect(60, y, 960, 42); ctx.fillStyle = navy; ctx.font = "800 14px Archivo, Arial"; ctx.fillText("ITEM / SERVICE", 80, y + 27); ctx.textAlign = "center"; ctx.fillText("QTY", 745, y + 27); ctx.fillText("RATE", 855, y + 27); ctx.textAlign = "right"; ctx.fillText("AMOUNT", 995, y + 27); ctx.textAlign = "left"; y += 58;
   (invoice.lines || []).slice(0, 12).forEach((item) => { const note = clean(item.note); const height = note ? 60 : 44; ctx.fillStyle = ink; ctx.font = "700 16px Archivo, Arial"; ctx.fillText(clean(item.name), 80, y + 13); if (note) { ctx.fillStyle = muted; ctx.font = "500 12px Archivo, Arial"; ctx.fillText(canvasLines(ctx, note, 570)[0] || "", 80, y + 35); } ctx.fillStyle = ink; ctx.font = "600 15px Archivo, Arial"; ctx.textAlign = "center"; ctx.fillText(String(item.qty), 745, y + 13); ctx.fillText(money(item.price), 855, y + 13); ctx.textAlign = "right"; ctx.fillText(money(item.amount), 995, y + 13); ctx.textAlign = "left"; ctx.strokeStyle = "#dce8f1"; ctx.beginPath(); ctx.moveTo(60, y + height - 7); ctx.lineTo(1020, y + height - 7); ctx.stroke(); y += height; });

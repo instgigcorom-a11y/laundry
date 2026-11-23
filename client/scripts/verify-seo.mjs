@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { preview } from 'vite';
 import { areaGroups, areaPages, primaryPublicPages, publicPages, SITE_URL } from '../src/data/publicPages.js';
-import { starterCatalog } from '../src/data/starterCatalog.js';
+import { formatPublicRate } from '../src/data/publicRates.js';
+import { staticAppPaths, parameterizedAppPaths } from '../src/data/appPaths.js';
 import { serviceTags } from '../src/data/serviceGuides.js';
 import { businessFaqs } from '../src/data/businessFaqs.js';
 import { SHOP_ADDRESS } from '../src/data/shopDetails.js';
@@ -17,6 +18,13 @@ const titles = new Set();
 const descriptions = new Set();
 const localLinks = new Set();
 const localAssets = new Set();
+const getRates = html => JSON.parse(html.match(/<script id="public-rates" type="application\/json">(.*?)<\/script>/)?.[1] || '[]');
+function assertRateRows(html, rates) {
+  const rows = [...html.matchAll(/<tr id="([^"]+)"><th scope="row">(.*?)<\/th><td>(.*?)<\/td><td>(.*?)<\/td><\/tr>/g)]
+    .map(([, id, name, service, price]) => [id, decode(name), decode(service), decode(price)]);
+  const expected = rates.map(rate => [rate.id, rate.name, rate.service || '', formatPublicRate(rate)]);
+  assert.deepEqual(rows.sort(), expected.sort());
+}
 const contentSamples = {
   '/': 'Choose care for your everyday clothes',
   '/laundry-service-amritsar/': 'Choose the service based on whether you need pressing included.',
@@ -35,6 +43,7 @@ const contentSamples = {
   '/bag-cleaning-amritsar/': 'Identify the material and bag type',
 };
 try {
+  const rates = getRates(await readFile('dist/pricing/index.html', 'utf8'));
   for (const page of publicPages) {
     const response = await fetch(origin + page.path);
     assert.equal(response.status, 200, page.path);
@@ -139,8 +148,7 @@ try {
     if (page.intro) {
       assert.ok(visibleText.includes(page.intro), 'service introduction missing');
       assert.ok(visibleText.includes(page.detail), 'service details missing');
-      assert.equal((main.match(/<th scope="row">/g) || []).length, starterCatalog.filter(page.matches).length);
-      assert.ok(starterCatalog.filter(page.matches).length > 0, 'service has no verified rate entries');
+      assertRateRows(main, rates.filter(page.matches));
       for (const [question, answer] of page.questions) {
         assert.ok(visibleText.includes(question), 'service question missing');
         assert.ok(visibleText.includes(answer), 'service answer missing');
@@ -161,8 +169,8 @@ try {
       assert.ok(main.includes('does not guarantee pickup at every address'));
     }
     if (page.path === '/pricing/') {
-      assert.equal((main.match(/<tbody>/g) || []).length, 7);
-      assert.equal((main.match(/<th scope="row">/g) || []).length, starterCatalog.length);
+      assertRateRows(main, rates);
+      if (!rates.length) assert.ok(main.includes('See current rates'), 'show an ordering link when rates are unavailable');
     }
     titles.add(title); descriptions.add(description);
     console.log(`PASS 200 ${page.path} | ${title} | initial H1 and body content, description, canonical, schema`);
@@ -192,12 +200,24 @@ try {
   for (const url of actualUrls) localLinks.add(new URL(url).pathname);
   const app = await readFile('dist/app.html', 'utf8');
   assert.ok(app.includes('<div id="root"></div>'), 'existing routes need an unrendered app shell');
-  assert.ok((await readFile('dist/_redirects', 'utf8')).includes('/* /app.html 200'));
+  const redirects = await readFile('dist/_redirects', 'utf8');
+  assert.ok(!redirects.includes('/* /app.html 200'));
+  for (const path of parameterizedAppPaths) assert.ok(redirects.includes(`${path} /app.html 200`));
   assert.ok(app.includes('content="noindex, follow"'), 'utility shell must not be indexed');
-  for (const path of ['/login', '/register', '/forgot-password', '/cart', '/orders', '/admin']) {
+  for (const path of staticAppPaths) {
+    assert.equal(await readFile(`dist${path}/index.html`, 'utf8'), app, `static entry for ${path}`);
+  }
+  for (const path of [...staticAppPaths, ...parameterizedAppPaths.map(path => path.replace(':id', 'order-fixture'))]) {
     const response = await fetch(origin + path);
     assert.equal(response.status, 200);
     assert.equal(await response.text(), app, `existing app route ${path}`);
+  }
+  for (const path of ['/missing-laundry-page/', '/areas-we-serve/missing-area/', '/admin/unknown', '/payment', '/payment/order-fixture/extra']) {
+    const response = await fetch(origin + path, { redirect: 'manual' });
+    assert.equal(response.status, 404, path);
+    const html = await response.text();
+    assert.ok(html.includes('<h1>Page not found</h1>'));
+    assert.ok(html.includes('content="noindex, follow"'));
   }
   for (const path of ['/products', '/products/']) {
     const response = await fetch(origin + path);
@@ -240,6 +260,7 @@ try {
   assert.ok(llmsText.includes('[Contact](https://pplwash.in/contact/)'));
   console.log(`PASS ${localLinks.size} local link destinations and ${localAssets.size} local assets; sitemap has exactly ${expectedUrls.length} URLs; robots.txt points to sitemap`);
   console.log('PASS 10 visible clickable service tags on all 54 public pages, 8 service guides with rates and FAQs');
+  console.log(`PASS ${rates.length} published rate rows match the ordering catalogue snapshot; known app routes work and missing URLs return 404`);
   console.log('PASS 39 linked area pages with unique enquiry tips, map origins, WhatsApp enquiries and coverage notes');
   console.log('PASS 10 accessible FAQ accordions with answers in initial HTML on home, areas directory and contact');
   console.log('PASS unique metadata, 39 candidate areas, full published prices, sitemap and legacy app fallback');

@@ -1,10 +1,4 @@
 import { SHOP_ADDRESS, SHOP_PHONE } from './shopDetails.js';
-import { starterCatalog } from './starterCatalog.js';
-
-const rate = id => {
-  const item = starterCatalog.find(item => item.id === id);
-  return `${item.from ? 'from ' : ''}Rs ${item.price} per ${item.unit}`;
-};
 
 // Answers describe verified catalogue and application features. Availability
 // questions are referred to the shop instead of making unconfirmed promises.
@@ -31,7 +25,7 @@ export const businessFaqs = [
   },
   {
     question: 'What are the laundry and dry cleaning prices at Prem Power Laundry?',
-    answer: `Our published rate card lists wash & fold at ${rate('starter_everyday_wash-fold')}, wash & press at ${rate('starter_everyday_wash-press')} and the everyday dry clean entry ${rate('starter_everyday_dry-clean')}. Item-wise rates differ, and From prices depend on the work after inspection. Confirm current prices, collection charges and the final total with the shop.`,
+    answer: 'See the rate card for current wash & fold, wash & press, dry cleaning and garment pressing rates. Prices depend on the item and service. Rates marked From are starting prices. Confirm collection charges and the final total with the shop.',
     path: '/pricing/', link: 'Compare the published prices',
   },
   {

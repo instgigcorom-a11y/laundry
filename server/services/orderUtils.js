@@ -1,5 +1,14 @@
 "use strict";
 function clampNumber(value, min, max, fallback = 0) { const n = Number(value); return Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : fallback; }
+function orderPaymentAmounts(order) {
+  const total = Number(order.total) || 0;
+  const requested = clampNumber(order.advanceAmount, 0, total);
+  // Older orders stored the recorded advance directly on advanceAmount.
+  const advanceReceived = clampNumber(order.verifiedAdvanceAmount ?? requested, 0, total);
+  const paidAmount = order.paymentStatus === "paid" ? total : advanceReceived;
+  const balance = Math.round((total - paidAmount) * 100) / 100;
+  return { advanceReceived, paidAmount, balance, paymentDue: advanceReceived === 0 && requested > 0 ? Math.min(requested, balance) : balance };
+}
 function sanitiseLine(line) {
   const l = line || {};
   return { name: String(l.name || "").slice(0,120), meta: String(l.meta || "").slice(0,120), unit: String(l.unit || "").slice(0,40), qty: clampNumber(l.qty,0,999,0), price: clampNumber(l.price,0,1e7,0) };
@@ -10,6 +19,6 @@ function sanitiseInvoice(inv, fallbackLines) {
 }
 function orderToClient(order) {
   const o = typeof order.toObject === "function" ? order.toObject() : order;
-  return { id:o.id, token:o.token, createdAt:o.createdAtMs, items:o.items||[], total:o.total||0, mode:o.mode||"pickup", dateLabel:o.dateLabel||"", slot:o.slot||"", readyBy:o.readyBy||"", addrText:o.addrText||"", deliveryAddress:o.deliveryAddress||{}, paidVia:o.paidVia||"", advanceAmount:o.advanceAmount||0, gst:o.gst||{}, paymentStatus:o.paymentStatus||"pending", status:o.status||"pending", invoice:o.invoice||{} };
+  return { id:o.id, token:o.token, createdAt:o.createdAtMs, items:o.items||[], total:o.total||0, mode:o.mode||"pickup", dateLabel:o.dateLabel||"", slot:o.slot||"", readyBy:o.readyBy||"", addrText:o.addrText||"", deliveryAddress:o.deliveryAddress||{}, paidVia:o.paidVia||"", advanceAmount:o.advanceAmount||0, ...orderPaymentAmounts(o), gst:o.gst||{}, paymentStatus:o.paymentStatus||"pending", status:o.status||"pending", invoice:o.invoice||{} };
 }
-module.exports = { clampNumber, sanitiseLine, sanitiseInvoice, orderToClient };
+module.exports = { clampNumber, sanitiseLine, sanitiseInvoice, orderToClient, orderPaymentAmounts };

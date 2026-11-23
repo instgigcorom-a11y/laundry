@@ -10,6 +10,7 @@ import { Button, Field, PasswordField, Status } from "../components/common";
 import { SHOP_ADDRESS, SHOP_HOURS, SHOP_MAP_URL } from "../data/shopDetails";
 
 const rupees = (value) => `Rs ${Number(value || 0).toFixed(0)}`;
+const paymentMoney = (value) => `Rs ${Number(value || 0).toFixed(2)}`;
 const READY_DAYS = 3;
 const timeSlots = ["08:00 - 10:00", "10:00 - 12:00", "12:00 - 14:00", "14:00 - 16:00", "16:00 - 18:00", "18:00 - 20:00"];
 const pause = (milliseconds) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
@@ -125,18 +126,88 @@ export function AddressFormPage() {
 }
 
 export function PaymentMethodPage() {
-  const { items, total, clear } = useContext(CartContext); const { booking, update, reset } = useContext(BookingContext); const navigate = useNavigate(); const settings = useShopSettings(); const [loading, setLoading] = useState(false); const [error, setError] = useState(""); const bill = totals(total, booking.mode, settings);
-  async function confirm() { if (booking.mode === "pickup" && !hasCompleteAddress(booking.address)) { setError("Choose a complete pickup address before confirming."); navigate("/addresses"); return; } if (booking.gst?.required && (!booking.gst.gstin || !booking.gst.businessName)) { setError("Enter GSTIN and GST customer name."); return; } setLoading(true); setError(""); try { const { order } = await shopService.createOrder({ items, mode: booking.mode, dateLabel: booking.mode === "drop" ? "Shop drop-off" : booking.dateLabel, slot: booking.mode === "drop" ? "At your convenience" : booking.slot, readyBy: booking.readyBy || "3 days after collection", deliveryAddress: booking.address, paidVia: booking.paidVia, advanceAmount: Number(booking.advanceAmount || 0), gst: booking.gst }); clear(); reset(); showToast("Order confirmed. Your token is ready."); navigate(`/confirmation/${order.id}`); } catch (err) { setError(err.message); } finally { setLoading(false); } }
-  if (!items.length) return <CartPage />;
-  const gst = booking.gst || { required: false, gstin: "", businessName: "", address: "" };
-  const advance = Math.max(0, Math.min(bill.total, Number(booking.advanceAmount || 0)));
+  const { items, total, clear } = useContext(CartContext);
+  const { booking, update, reset } = useContext(BookingContext);
+  const navigate = useNavigate();
+  const settings = useShopSettings();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const bill = totals(total, booking.mode, settings);
+  const advanceInput = Number(booking.advanceAmount || 0);
+  const advance = Math.round(Math.max(0, Math.min(bill.total, advanceInput)) * 100) / 100;
   const balance = Math.max(0, bill.total - advance);
-  return <section className="booking-page"><div className="booking-head"><p className="eyebrow">Payment</p><h1>How will you pay?</h1><span>Globe EN</span></div><div className="choice-stack"><button className={`booking-choice ${booking.paidVia === "Cash" ? "selected" : ""}`} onClick={() => update({ paidVia: "Cash" })}><span className="choice-icon">C</span><span><b>Cash</b><small>Pay when the clothes come back</small></span></button><button className={`booking-choice ${booking.paidVia === "UPI" ? "selected" : ""}`} onClick={() => update({ paidVia: "UPI" })}><span className="choice-icon">U</span><span><b>UPI</b><small>Google Pay, PhonePe, Paytm, any app</small></span></button></div><article className="payment-status-box card"><div className="title-row"><b>Advance payment</b><span className={`payment-live payment-${advance >= bill.total ? "paid" : advance > 0 ? "partial" : "pending"}`}>{advance >= bill.total ? "Paid" : advance > 0 ? "Advance / pending" : "Pending"}</span></div><Field label="Advance amount (Rs)" type="number" min="0" max={bill.total} step="0.01" value={booking.advanceAmount || 0} onChange={(event) => update({ advanceAmount: event.target.value })} /><div className="invoice-payment-balance"><span>Balance due: <b>{rupees(balance)}</b></span><span>Total: <b>{rupees(bill.total)}</b></span></div></article><article className="gst-option card"><label className="gst-toggle"><input type="checkbox" checked={!!gst.required} onChange={(event) => update({ gst: { ...gst, required: event.target.checked } })} /> Add GST / GSTIN details</label>{gst.required && <div className="grid"><Field label="GSTIN" value={gst.gstin || ""} maxLength="15" placeholder="22AAAAA0000A1Z5" onChange={(event) => update({ gst: { ...gst, gstin: event.target.value.toUpperCase() } })} /><Field label="Customer / business name" value={gst.businessName || ""} maxLength="120" onChange={(event) => update({ gst: { ...gst, businessName: event.target.value } })} /><Field label="GST billing address" value={gst.address || ""} maxLength="400" onChange={(event) => update({ gst: { ...gst, address: event.target.value } })} /></div>}</article><BookingTotal itemsTotal={total} mode={booking.mode} /><article className="booking-details"><b>{booking.mode === "pickup" ? "Pickup" : "Drop-off"}</b><p>{booking.dateLabel} · {booking.slot}</p>{booking.mode === "pickup" && <p>{addressLabel(booking.address)}</p>}</article>{error && <p className="error">{error}</p>}<Button loading={loading} onClick={confirm}>Confirm order {rupees(bill.total)}</Button></section>;
-}
+  const gst = booking.gst || {};
 
+  async function confirm(event) {
+    event.preventDefault();
+    if (booking.mode === "pickup" && !hasCompleteAddress(booking.address)) {
+      setError("Choose a complete pickup address before confirming.");
+      navigate("/addresses");
+      return;
+    }
+    if (gst.required && (!gst.gstin?.trim() || !gst.businessName?.trim())) {
+      setError("Enter GSTIN and GST customer name.");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      const { order } = await shopService.createOrder({
+        items, mode: booking.mode, dateLabel: booking.mode === "drop" ? "Shop drop-off" : booking.dateLabel,
+        slot: booking.mode === "drop" ? "At your convenience" : booking.slot,
+        readyBy: booking.readyBy || "3 days after collection", deliveryAddress: booking.address,
+        paidVia: booking.paidVia, advanceAmount: advance, gst: gst.required ? gst : { required: false }
+      });
+      clear();
+      reset();
+      showToast("Order confirmed. Your token is ready.");
+      navigate(`/confirmation/${order.id}`);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (!items.length) return <CartPage />;
+
+  return <section className="booking-page">
+    <div className="booking-head"><p className="eyebrow">Payment</p><h1>How will you pay?</h1><span>Globe EN</span></div>
+    <form className="checkout-payment-form" onSubmit={confirm}>
+      <div className="choice-stack">
+        <button type="button" className={`booking-choice ${booking.paidVia === "Cash" ? "selected" : ""}`} onClick={() => update({ paidVia: "Cash" })}><span className="choice-icon">C</span><span><b>Cash</b><small>Pay the shop by cash</small></span></button>
+        <button type="button" className={`booking-choice ${booking.paidVia === "UPI" ? "selected" : ""}`} onClick={() => update({ paidVia: "UPI" })}><span className="choice-icon">U</span><span><b>UPI</b><small>Google Pay, PhonePe, Paytm, any app</small></span></button>
+      </div>
+      <article className="payment-status-box card">
+        <div className="title-row">
+          <b>Advance payment</b>
+          <span role="status" className={`payment-live payment-${advance > 0 ? "partial" : "pending"}`}>{advance > 0 ? "Advance pending" : "Payment pending"}</span>
+        </div>
+        <Field label="Advance to pay (Rs)" type="number" min="0" max={bill.total} step="0.01"
+          value={booking.advanceAmount ?? ""} onChange={(event) => update({ advanceAmount: event.target.value })} />
+        <div className="invoice-payment-balance" aria-live="polite">
+          <span>Advance <b>{paymentMoney(advance)}</b></span>
+          <span>Balance after advance <b>{paymentMoney(balance)}</b></span>
+        </div>
+      </article>
+      <article className="gst-option card">
+        <label className="gst-toggle"><input type="checkbox" checked={!!gst.required} onChange={(event) => update({ gst: { ...gst, required: event.target.checked } })} /> Add GST billing details</label>
+        {gst.required && <div className="grid">
+          <Field label="GSTIN" required value={gst.gstin || ""} maxLength={15} placeholder="22AAAAA0000A1Z5" onChange={(event) => update({ gst: { ...gst, gstin: event.target.value.toUpperCase() } })} />
+          <Field label="Customer / business name" required value={gst.businessName || ""} maxLength={120} onChange={(event) => update({ gst: { ...gst, businessName: event.target.value } })} />
+          <Field label="GST billing address" value={gst.address || ""} maxLength={400} onChange={(event) => update({ gst: { ...gst, address: event.target.value } })} />
+        </div>}
+      </article>
+      <BookingTotal itemsTotal={total} mode={booking.mode} />
+      <article className="booking-details"><b>{booking.mode === "pickup" ? "Pickup" : "Drop-off"}</b><p>{booking.dateLabel} · {booking.slot}</p>{booking.mode === "pickup" && <p>{addressLabel(booking.address)}</p>}</article>
+      {error && <p className="error" role="alert">{error}</p>}
+      <Button loading={loading}>Confirm order {paymentMoney(bill.total)}</Button>
+    </form>
+  </section>;
+}
 export function ConfirmationPage() {
   const { id } = useParams(); const [order, setOrder] = useState(null); const [error, setError] = useState(""); useEffect(() => { shopService.order(id).then(({ order: next }) => setOrder(next)).catch((err) => setError(err.message)); }, [id]);
-  return <section className="booking-page"><Status loading={!order && !error} error={error}>{order && <><div className="booking-head"><p className="eyebrow">Prem Power Laundry</p><h1>Order confirmed</h1></div><article className="token-slip"><span>Token number</span><strong>{order.token}</strong><div><p><b>Items</b><span>{order.items.reduce((sum, item) => sum + item.qty, 0)}</span></p><p><b>{order.mode === "pickup" ? "Pickup" : "Drop-off"}</b><span>{order.dateLabel}<br />{order.slot}</span></p><p><b>Ready by</b><span>{order.readyBy}</span></p><p><b>Paying by</b><span>{order.paidVia}</span></p><p className="token-total"><b>Total</b><span>{rupees(order.total)}</span></p></div></article><p className="token-note">Show this token when the clothes are collected or delivered.</p><Link className="button" to="/orders">Track this order</Link><button className="button secondary noprint" onClick={() => window.print()}>Print bill</button>{order.paidVia === "UPI" && <Link className="button secondary" to={`/payment/${order.id}`}>Pay with UPI</Link>}<Link className="text-link" to="/">Back to home</Link></>}</Status></section>;
+  return <section className="booking-page"><Status loading={!order && !error} error={error}>{order && <><div className="booking-head"><p className="eyebrow">Prem Power Laundry</p><h1>Order confirmed</h1></div><article className="token-slip"><span>Token number</span><strong>{order.token}</strong><div><p><b>Items</b><span>{order.items.reduce((sum, item) => sum + item.qty, 0)}</span></p><p><b>{order.mode === "pickup" ? "Pickup" : "Drop-off"}</b><span>{order.dateLabel}<br />{order.slot}</span></p><p><b>Ready by</b><span>{order.readyBy}</span></p><p><b>Paying by</b><span>{order.paidVia}</span></p><p className="token-total"><b>Total</b><span>{rupees(order.total)}</span></p></div></article><p className="token-note">Show this token when the clothes are collected or delivered.</p><Link className="button" to="/orders">Track this order</Link><button className="button secondary noprint" onClick={() => window.print()}>Print bill</button>{order.paidVia === "UPI" && order.paymentDue > 0 && order.status !== "cancelled" && <Link className="button secondary" to={`/payment/${order.id}`}>{!order.advanceReceived && order.advanceAmount > 0 ? "Pay advance with UPI" : "Pay with UPI"}</Link>}<Link className="text-link" to="/">Back to home</Link></>}</Status></section>;
 }
 export function OrdersPage() {
   const [orders, setOrders] = useState([]); const [error, setError] = useState(""); const [working, setWorking] = useState(""); const [searchParams] = useSearchParams(); const tracked = searchParams.get("order");
@@ -150,13 +221,81 @@ export function OrdersPage() {
     catch (err) { setError(err.message); showToast(err.message || "Could not cancel this order.", "error"); }
     finally { setWorking(""); }
   }
-  return <section className="customer-orders"><p className="eyebrow">Order tracking</p><h1>Your orders</h1><Status error={error} empty={!error && !orders.length ? "You have not placed an order yet." : ""}><div className="customer-order-list">{orders.map((order) => <article id={`order-${order.id}`} className={`customer-order card ${tracked === order.id ? "tracked" : ""}`} key={order.id}><div className="customer-order-head"><div><strong>Order #{order.token}</strong><small>{new Date(order.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</small></div><span className={`order-status ${order.status}`}>{order.status}</span></div><div className="customer-order-details"><span>Total <b>{rupees(order.total)}</b></span><span>Collection <b>{order.mode === "pickup" ? "Home pickup" : "Shop drop-off"}</b></span><span>Payment <b>{order.paymentStatus?.replaceAll("_", " ")}</b></span></div><div className="actions">{order.paidVia === "UPI" && order.paymentStatus !== "paid" && order.status !== "cancelled" && <Link className="button" to={`/payment/${order.id}`}>Pay by UPI</Link>}{order.status === "pending" && <Button loading={working === order.id} onClick={() => cancel(order)}>Cancel order</Button>}</div></article>)}</div></Status></section>;
+  return <section className="customer-orders"><p className="eyebrow">Order tracking</p><h1>Your orders</h1><Status error={error} empty={!error && !orders.length ? "You have not placed an order yet." : ""}><div className="customer-order-list">{orders.map((order) => <article id={`order-${order.id}`} className={`customer-order card ${tracked === order.id ? "tracked" : ""}`} key={order.id}><div className="customer-order-head"><div><strong>Order #{order.token}</strong><small>{new Date(order.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</small></div><span className={`order-status ${order.status}`}>{order.status}</span></div><div className="customer-order-details"><span>Total <b>{rupees(order.total)}</b></span><span>Collection <b>{order.mode === "pickup" ? "Home pickup" : "Shop drop-off"}</b></span><span>Payment <b>{order.paymentStatus === "paid" ? "Paid" : order.paymentStatus === "verification_pending" ? "Verification pending" : order.advanceReceived > 0 ? "Advance received" : "Pending"}</b></span>{order.advanceReceived > 0 && <span>Balance due <b>{paymentMoney(order.balance)}</b></span>}</div><div className="actions">{order.paidVia === "UPI" && order.paymentStatus !== "paid" && order.status !== "cancelled" && <Link className="button" to={`/payment/${order.id}`}>Pay by UPI</Link>}{order.status === "pending" && <Button loading={working === order.id} onClick={() => cancel(order)}>Cancel order</Button>}</div></article>)}</div></Status></section>;
 }
 export function PaymentPage() {
-  const { id } = useParams(); const [data, setData] = useState(null); const [error, setError] = useState(""); const [submitting, setSubmitting] = useState(false);
-  useEffect(() => { shopService.payment(id).then(setData).catch((err) => setError(err.message)); }, [id]);
-  async function submitPayment() { setSubmitting(true); setError(""); try { const next = await shopService.submitUpiPayment(id); setData((current) => ({ ...current, ...next, payment: { ...current.payment, ...next.payment } })); showToast("Payment submitted for shop verification."); } catch (err) { setError(err.message); } finally { setSubmitting(false); } }
-  const paymentStatus = data?.payment?.status;
-  const statusCopy = paymentStatus === "paid" ? "Payment verified" : paymentStatus === "verification_pending" ? "Payment submitted for verification" : "Waiting for your UPI payment";
-  return <section className="payment-page"><Link className="booking-back" to="/orders">Back to orders</Link><h1>Pay by UPI</h1><Status loading={!data && !error} error={error}>{data && <article className="payment card"><p className="eyebrow">Order #{data.order.token}</p><h2>{rupees(data.payment.amount)}</h2>{data.payment.upiId ? <><p>Scan the QR code with any UPI app, then confirm below.</p><img alt="UPI payment QR code" src={`https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(data.payment.qrValue)}`} /><a className="button" href={data.payment.qrValue}>Open your UPI app</a></> : <p className="error">UPI is not configured for the shop yet. Please choose cash or contact the shop.</p>}<p className={`payment-status ${paymentStatus}`}><strong>{statusCopy}</strong></p>{paymentStatus === "pending" && data.payment.upiId && <Button loading={submitting} onClick={submitPayment}>I've completed payment</Button>}{paymentStatus === "verification_pending" && <small>The shop will verify your UPI transfer and update this order. This does not mark the payment as paid automatically.</small>}{paymentStatus === "paid" && <small>Your UPI payment has been verified by Prem Power Laundry.</small>}</article>}</Status></section>;
+  const { id } = useParams();
+  const [data, setData] = useState(null);
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const paymentStatus = data?.payment.status;
+  const payment = data?.payment;
+  const order = data?.order;
+  const canPay = payment?.status === "pending" && payment.amount > 0 && order.status !== "cancelled";
+  const payingAdvance = order && !order.advanceReceived && order.advanceAmount > 0;
+  const statusCopy = order?.status === "cancelled" ? "Order cancelled"
+    : paymentStatus === "paid" ? "Payment verified"
+    : paymentStatus === "verification_pending" ? "Payment submitted for verification"
+    : order?.advanceReceived > 0 ? "Advance received · balance pending"
+    : canPay ? "Waiting for your UPI payment" : "No balance due";
+
+  useEffect(() => {
+    let active = true;
+    setData(null);
+    setError("");
+    shopService.payment(id).then((next) => { if (active) setData(next); }).catch((err) => { if (active) setError(err.message); });
+    return () => { active = false; };
+  }, [id]);
+
+  useEffect(() => {
+    if (paymentStatus !== "verification_pending") return;
+    let active = true;
+    const timer = window.setInterval(async () => {
+      try {
+        const next = await shopService.payment(id);
+        if (active) setData(next);
+      } catch {
+        // Keep displaying the last confirmed state while the connection recovers.
+      }
+    }, 5000);
+    return () => { active = false; window.clearInterval(timer); };
+  }, [id, paymentStatus]);
+
+  async function submitPayment() {
+    setSubmitting(true);
+    setError("");
+    try {
+      const result = await shopService.submitUpiPayment(id, payment.amount, order.advanceReceived);
+      setData({ order: result.order, payment: { ...payment, ...result.payment } });
+      setData(await shopService.payment(id));
+      showToast("Payment submitted for shop verification.");
+    } catch (err) {
+      setError(err.message);
+      try { setData(await shopService.payment(id)); } catch { /* Keep the latest available payment details. */ }
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return <section className="payment-page">
+    <Link className="booking-back" to="/orders">Back to orders</Link>
+    <h1>Pay by UPI</h1>
+    {error && <p className="error" role="alert">{error}</p>}
+    <Status loading={!data && !error}>
+      {data && <article className="payment card">
+        <p className="eyebrow">Order #{order.token}</p>
+        <p role="status" className={`payment-live payment-${paymentStatus === "paid" ? "paid" : paymentStatus === "verification_pending" || order.advanceReceived > 0 ? "partial" : "pending"}`}>{statusCopy}</p>
+        {order.advanceReceived > 0 && <p>Advance received {paymentMoney(order.advanceReceived)} · Balance due {paymentMoney(order.balance)}</p>}
+        {canPay && <>
+          <h2>{payingAdvance ? "Advance" : "Amount due"} {paymentMoney(payment.amount)}</h2>
+          {payment.qrValue ? <>
+            <p>Scan the QR code or open your UPI app, then submit the payment for verification.</p>
+            <img alt="UPI payment QR code" src={`https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(payment.qrValue)}`} />
+            <a className="button" href={payment.qrValue}>Open your UPI app</a>
+            <Button loading={submitting} onClick={submitPayment}>I've completed payment</Button>
+          </> : <p className="error">UPI is unavailable. Contact the shop to pay.</p>}
+        </>}
+      </article>}
+    </Status>
+  </section>;
 }

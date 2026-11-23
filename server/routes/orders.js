@@ -7,7 +7,7 @@ const Shop = require("../models/Shop");
 const Customer = require("../models/Customer");
 const AdminInvoice = require("../models/AdminInvoice");
 const { requireAuth } = require("../middleware/auth");
-const { orderToClient } = require("../services/orderUtils");
+const { orderToClient, orderPaymentAmounts } = require("../services/orderUtils");
 const { makeId, customerSnapshot, invoiceTotals } = require("../services/adminUtils");
 const { notifyAdminsOfNewOrder } = require("../services/pushNotifications");
 const { emitNewOrder } = require("../services/realtime");
@@ -66,13 +66,7 @@ async function createOrderInvoice(order, user, deliveryCharge, invoiceSettings) 
     itemId: item.productId || "", itemCode: "", name: item.name, unit: item.unit || "pcs",
     qty: item.qty, price: item.price, amount: item.subtotal, note: item.description || ""
   }));
-  const customerSnapshotWithGst = customerSnapshot(customer);
-  const gst = order.gst && typeof order.gst === "object" ? order.gst : {};
-  if (gst.required) {
-    customerSnapshotWithGst.gstin = gst.gstin || "";
-    customerSnapshotWithGst.gstName = gst.businessName || "";
-    customerSnapshotWithGst.gstAddress = gst.address || "";
-  }
+  const { paidAmount } = orderPaymentAmounts(order);
   const totals = invoiceTotals({
     lines,
     deliveryCharge: Math.max(0, deliveryCharge),
@@ -84,11 +78,11 @@ async function createOrderInvoice(order, user, deliveryCharge, invoiceSettings) 
   const sequence = await nextSequence("invoiceSeq");
   return AdminInvoice.create({
     id: makeId("inv"), number: "INV-" + String(sequence).padStart(5, "0"), sourceOrderId: order.id, orderNumber: "#" + order.token,
-    customerId: customer.id, customer: customerSnapshotWithGst, invoiceDate: order.createdAtMs,
+    customerId: customer.id, customer: customerSnapshot(customer, order.gst), invoiceDate: order.createdAtMs,
     lines, ...totals, garmentCount: lines.reduce((sum, line) => sum + Number(line.qty || 0), 0),
     paid: order.paymentStatus === "paid",
-    paidAmount: order.paymentStatus === "paid" ? totals.total : Math.min(totals.total, Number(order.advanceAmount || 0)),
-    paymentStatus: order.paymentStatus === "paid" ? "paid" : (order.advanceAmount > 0 ? "partial" : "pending"),
+    paidAmount,
+    paymentStatus: order.paymentStatus === "paid" ? "paid" : paidAmount > 0 ? "partial" : "pending",
     note: [String(invoiceSettings?.defaultInvoiceNotes || "").trim(), "Order #" + order.token].filter(Boolean).join(" | ").slice(0, 500),
     terms: String(invoiceSettings?.defaultInvoiceTerms || "").slice(0, 1000),
     createdBy: user._id, updatedBy: user._id
@@ -127,8 +121,8 @@ router.post("/", requireAuth, async (req, res, next) => {
     });
     const mode = req.body.mode === "drop" ? "drop" : "pickup";
     const paidVia = String(req.body.paidVia || "").toLowerCase() === "upi" ? "UPI" : "Cash";
-    const gst = req.body.gst && typeof req.body.gst === "object" ? {
-      required: !!req.body.gst.required,
+    const gst = req.body.gst?.required === true ? {
+      required: true,
       gstin: String(req.body.gst.gstin || "").trim().toUpperCase().slice(0, 15),
       businessName: String(req.body.gst.businessName || "").trim().slice(0, 120),
       address: String(req.body.gst.address || "").trim().slice(0, 400)
@@ -151,11 +145,11 @@ router.post("/", requireAuth, async (req, res, next) => {
     const dropDiscount = 0;
     const deliveryCharge = mode === "pickup" ? pickupFee : 0;
     const total = Math.max(0, Math.round((itemsTotal + deliveryCharge) * 100) / 100);
-    const advanceAmount = Math.max(0, Math.min(total, Number(req.body.advanceAmount) || 0));
+    const advanceAmount = Math.round(Math.max(0, Math.min(total, Number(req.body.advanceAmount) || 0)) * 100) / 100;
     const order = await Order.create({
       id: "ord_" + crypto.randomBytes(8).toString("base64url"), owner: req.user._id,
       token: String(shop.orderSeq).padStart(4, "0"), createdAtMs: Date.now(), items, total,
-      mode, dateLabel, slot, readyBy, paidVia, advanceAmount, gst, deliveryAddress,
+      mode, dateLabel, slot, readyBy, paidVia, advanceAmount, verifiedAdvanceAmount: 0, gst, deliveryAddress,
       addrText: mode === "pickup" ? addressText(deliveryAddress) : "Prem Power Laundry, Shop no. 4, New Partap Nagar Maine, Gurlal Bazar, East Gobind Nagar, Pratap Nagar, Amritsar, Amritsar Cantt., Punjab 143001",
       paymentStatus: "pending", status: "pending",
       invoice: { itemsTotal, deliveryCharge, pickupFee, freeAbove, dropDiscount }

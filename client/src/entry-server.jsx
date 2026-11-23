@@ -6,6 +6,6 @@ import { CartProvider } from './context/CartContext.jsx';
 import { BookingProvider } from './context/BookingContext.jsx';
 import { ToastProvider } from './context/ToastContext.jsx';
 
-export function render(path) {
-  return renderToString(<ToastProvider><AuthProvider><CartProvider><StaticRouter location={path}><BookingProvider><AppRoutes /></BookingProvider></StaticRouter></CartProvider></AuthProvider></ToastProvider>);
+export function render(path, initialRates = []) {
+  return renderToString(<ToastProvider><AuthProvider><CartProvider><StaticRouter location={path}><BookingProvider><AppRoutes initialRates={initialRates} /></BookingProvider></StaticRouter></CartProvider></AuthProvider></ToastProvider>);
 }

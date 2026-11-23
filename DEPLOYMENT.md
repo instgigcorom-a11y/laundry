@@ -69,15 +69,23 @@ contains its own `index.html`, title, description, canonical URL, visible conten
 and business JSON-LD. The browser hydrates the same React routes. No production
 Node rendering server is required. See [Vite's SSR guide](https://vite.dev/guide/ssr.html).
 
-Configure the host to serve existing files and directory indexes **before** the
-SPA fallback. For unmatched customer/admin URLs, rewrite to `/app.html` with a
-200 response. Do not force every URL to `/index.html`: that would return the home
-page HTML for the other public pages. The included `_redirects` supports hosts
-such as Netlify and Cloudflare Pages that respect file precedence. On Render
-Static Sites, use a `/*` → `/app.html` rewrite; existing static files must take
-precedence. On Nginx, use `try_files $uri $uri/ /app.html;` with `index index.html;`.
-Keep `/products/` and all existing account, booking and admin routes available.
-No existing public URL was replaced, so no replacement redirects are required.
+Serve built files and directory indexes first. The build creates static entry
+pages for login, booking and admin routes, plus `404.html` for missing pages.
+Only the two order-specific routes need to use the SPA shell.
+
+- On Render Static Sites, first deploy the complete build. Then, in the
+  frontend service's **Redirects/Rewrites** settings, add two **Rewrite**
+  rules targeting `/app.html`: `/confirmation/:id` and `/payment/:id`. Remove
+  the general `/*` rewrite so other missing paths return HTTP 404. Keep any
+  existing redirects for canonical public URLs.
+- On Netlify and Cloudflare Pages, deploy the generated `_redirects` and
+  `404.html` with the rest of the build.
+- On Nginx, serve existing files with `try_files $uri $uri/ =404;` and set
+  `error_page 404 /404.html;`. Rewrite only
+  `^/(confirmation|payment)/[^/]+/?$` to `/app.html`.
+
+After changing routing, open a known public page, `/login`, `/admin/invoices`
+and a payment deep link directly. Confirm that an unknown URL returns HTTP 404.
 
 The SEO update also generates `products/index.html`, an **indexable interactive
 catalogue shell** with its own canonical and social metadata. Keep this file
@@ -104,9 +112,13 @@ host-specific rewrite issues.
 Public content is in `client/src/pages/PublicPages.jsx`; metadata, candidate area
 groups and business schema are in `client/src/data/publicPages.js`. Address and
 phone details are shared with the existing app through `shopDetails.js`.
-The pricing page renders the existing `starterCatalog.js` public rate card;
-the live ordering catalogue still uses the backend. If admin rates change,
-update the published rate card and rebuild to keep the static prices aligned.
+The rate card, homepage prices and service guide tables use the ordering
+catalogue's public API. With `VITE_API_URL` set, the production build fetches
+one catalogue snapshot for the initial HTML. A browser refreshes the rates
+from the same API on the pages that show prices. If the snapshot cannot be
+loaded at build time, the pages still build and the browser retrieves prices
+when the API is available. Rebuild after changing catalogue prices to refresh
+the initial HTML served to crawlers.
 The new pages ask customers to confirm hours, pickup coverage, charges and
 return dates instead of publishing unverified schedules or promises.
 

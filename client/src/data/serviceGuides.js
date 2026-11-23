@@ -1,3 +1,5 @@
+import { isSteamPress } from './publicRates.js';
+
 // These ten service topics come from the existing public rate card.
 // They are an initial editorial selection, not a claim about search volume.
 export const serviceTags = [
@@ -24,7 +26,7 @@ const guides = [
     preparationTitle: 'Prepare a pressing enquiry',
     preparation: 'Count the garments and identify each type. Mention any marks that still need cleaning, attach a care-label photo if available, and share the date you need them back. Confirm whether the selected pressing service is suitable for the fabric before booking.',
     rateCaption: 'Published press-only and steam press rates',
-    matches: item => item.service === 'Steam press' || item.service === 'Press only',
+    matches: isSteamPress,
     questions: [
       ['Does steam pressing include washing?', 'The catalogue lists Steam press separately from Wash & press. Choose wash & press if you also need laundry, and ask the shop to confirm the appropriate option for your garments.'],
       ['Is every pressing rate per piece?', 'Most garment entries use pc, while two-piece and three-piece suits use set. Check the unit beside the item; rates marked From are starting prices.'],
@@ -77,7 +79,7 @@ const guides = [
     rateCaption: 'Published carpet cleaning rate by area',
     matches: item => item.id === 'starter_household_carpet_dry-clean',
     questions: [
-      ['Is carpet cleaning charged per piece?', 'The published carpet entry is Rs 24 per sq ft, not a flat per-carpet price. Confirm measurements and the final total with the shop.'],
+      ['How is carpet cleaning priced?', 'Check the current rate per square foot in the table. Confirm the measurements and final total with the shop.'],
       ['Can I book on-site carpet cleaning?', 'The existing catalogue does not establish an on-site service. Contact the shop to discuss handover and transport arrangements for your carpet.'],
     ],
     related: '/curtain-dry-cleaning-amritsar/', relatedLabel: 'Compare curtain dry cleaning options',
@@ -92,7 +94,7 @@ const guides = [
     preparationTitle: 'Plan your bedding handover',
     preparation: 'Mention any stains, tears or concerns about the fabric or filling before booking. Ask how to pack large bedding items for drop-off or collection. Confirm pickup availability for your full address and the return date, especially if you need the bedding back for a particular day.',
     rateCaption: 'Published blanket, quilt and duvet dry cleaning rates',
-    matches: item => item.category === 'household' && /^(Blanket|Quilt|Duvet)/.test(item.baseName),
+    matches: item => item.category === 'household' && /^(Blanket|Quilt|Duvet)/i.test(item.baseName || item.name),
     questions: [
       ['Which blanket rate should I select?', 'Match single or double size and one-ply or two-ply construction. If you are unsure, contact the shop before adding the item to an order.'],
       ['Is a duvet the same price as a quilt?', 'They have separate catalogue entries. The duvet entry is marked From, so its final price needs confirmation after the work is assessed.'],
@@ -109,7 +111,7 @@ const guides = [
     preparationTitle: 'Getting a suit ready for an event',
     preparation: 'Share the date you need the suit and ask the shop to confirm a return date before booking. Point out marks on the cuffs, collar, lapels or trousers. Empty all pockets before handover and keep a record of the pieces included in your order.',
     rateCaption: 'Published suit dry cleaning and steam press rates per set',
-    matches: item => item.category === 'men' && item.baseName.startsWith('Suit -'),
+    matches: item => item.category === 'men' && (item.baseName || item.name).startsWith('Suit -'),
     questions: [
       ['Can I choose pressing without dry cleaning?', 'Yes. The catalogue has separate Steam press entries for two-piece and three-piece suits. Choose the service you need and confirm it with the shop.'],
       ['Can I send only the coat?', 'The rate card also lists Coat as an individual garment. Contact the shop if you need help matching a partial suit to the correct item.'],

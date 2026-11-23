@@ -5,7 +5,7 @@ export const shopService = {
   orders: () => api("/api/orders"), order: (id) => api(`/api/orders/${id}`),
   createOrder: (booking) => api("/api/orders", { method: "POST", body: JSON.stringify(booking) }),
   cancelOrder: (id) => api(`/api/orders/${id}/cancel`, { method: "PATCH", body: JSON.stringify({}) }),
-  payment: (id) => api(`/api/payments/${id}`), submitUpiPayment: (id) => api(`/api/payments/${id}/submit`, { method: "POST", body: JSON.stringify({}) }),
+  payment: (id) => api(`/api/payments/${id}`), submitUpiPayment: (id, amount, advanceReceived) => api(`/api/payments/${id}/submit`, { method: "POST", body: JSON.stringify({ amount, advanceReceived }) }),
   dashboard: () => api("/api/admin/dashboard"), users: () => api("/api/admin/users"),
   adminOrders: () => api("/api/admin/orders"), orderInvoice: (id) => api(`/api/admin/orders/${id}/invoice`), updateOrder: (id, data) => api(`/api/admin/orders/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
   billingSettings: () => api("/api/admin/billing-settings"), saveBillingSettings: (settings) => api("/api/admin/billing-settings", { method: "PUT", body: JSON.stringify({ settings }) }),

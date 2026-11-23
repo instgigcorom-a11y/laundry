@@ -73,9 +73,7 @@ async function buildAdminInvoicePayload(input, currentInvoice, shopSettings) {
 
   const lines = lineInputs.map((line, index) => {
     const fallbackLine = currentLines[index] || null;
-    const requestedItemId = String(
-      (line && line.itemId) || (fallbackLine && fallbackLine.itemId) || ""
-    ).trim();
+    const requestedItemId = String(line?.itemId ?? fallbackLine?.itemId ?? "").trim();
     const itemDoc = requestedItemId ? itemMap.get(requestedItemId) : null;
 
     if (requestedItemId && !itemDoc && !(fallbackLine && fallbackLine.itemId === requestedItemId)) {

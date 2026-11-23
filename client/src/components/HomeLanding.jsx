@@ -2,7 +2,7 @@ import { useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext.jsx';
 import { CartContext } from '../context/CartContext.jsx';
-import { starterCatalog } from '../data/starterCatalog.js';
+import { formatPublicRate } from '../data/publicRates.js';
 import { SHOP_ADDRESS, SHOP_MAP_URL, SHOP_PHONE, SHOP_PHONE_TEL, SHOP_WHATSAPP_URL } from '../data/shopDetails.js';
 import { BusinessFaqs } from './BusinessFaqs.jsx';
 import './homeLanding.css';
@@ -45,16 +45,19 @@ const steps = [
   ['Collect / Get Delivered', 'Follow your order and confirm handover with the shop', '/orders'],
 ];
 
-export function HomeLanding({ page }) {
+export function HomeLanding({ page, rates }) {
   const { user } = useContext(AuthContext);
   const { itemCount } = useContext(CartContext);
-  const services = starterCatalog.filter(item => item.category === 'everyday');
+  const services = [
+    ['Wash & fold', 'starter_everyday_wash-fold'], ['Wash & press', 'starter_everyday_wash-press'],
+    ['Dry cleaning'], ['Steam pressing', 'starter_everyday_press-only'],
+  ];
   const destinations = ['/laundry-service-amritsar/', '/laundry-service-amritsar/', '/dry-cleaning-amritsar/', '/steam-press-amritsar/'];
   return <div className="home-landing">
     <section className="landing-hero" aria-labelledby="landing-title">
       <div className="landing-photo"><img src="/images/home-laundry-hero-768.webp" srcSet="/images/home-laundry-hero-480.webp 480w, /images/home-laundry-hero-768.webp 768w, /images/home-laundry-hero-1145.webp 1145w" sizes="(max-width: 560px) 90vw, (max-width: 850px) 38vw, 47vw" alt="Folded green and ivory laundry on a counter in a softly lit laundry room" width="1145" height="1374" fetchPriority="high" decoding="async" /><span className="landing-photo-caption">Laundry care, thoughtfully arranged.</span></div>
       <div className="landing-copy"><p className="landing-eyebrow">Prem Power Laundry · Amritsar</p><h1 id="landing-title">{page.h1}</h1><p className="landing-intro">Laundry, dry cleaning and pressing from our shop in Gurlal Bazar, New Partap Nagar. Choose care for your everyday clothes and compare our published rates before arranging an order.</p><div className="hero-actions landing-booking"><a className="button" data-conversion="whatsapp" data-service="/" href={SHOP_WHATSAPP_URL} target="_blank" rel="noreferrer">Book Pickup on WhatsApp</a><a className="text-link" data-conversion="call" href={`tel:${SHOP_PHONE_TEL}`}>Call Now</a></div><p className="landing-pickup-note">Send your address to confirm pickup availability, charges and return date.</p><span className="landing-handwritten" aria-hidden="true">Fresh<br />Clean<br />Confident<br /><i>Everyday</i></span></div>
-      <div className="landing-services">{services.map((service, index) => <Link key={service.id} to={destinations[index]} className={`landing-service landing-service-${index + 1}`}><CareIcon name={['wash', 'shirt', 'hanger', 'iron'][index]} /><span className="landing-service-name">{service.name}</span><strong>{service.from ? 'From ' : ''}Rs {service.price} / {service.unit}</strong><span className="landing-card-arrow" aria-hidden="true">→</span></Link>)}</div>
+      <div className="landing-services">{services.map(([name, id], index) => <Link key={name} to={destinations[index]} className={`landing-service landing-service-${index + 1}`}><CareIcon name={['wash', 'shirt', 'hanger', 'iron'][index]} /><span className="landing-service-name">{name}</span><strong>{formatPublicRate(rates.find(item => item.id === id))}</strong><span className="landing-card-arrow" aria-hidden="true">→</span></Link>)}</div>
     </section>
     <section className="landing-benefits" aria-label="Laundry care at Prem Power Laundry">{benefits.map(([icon, heading, text]) => <article key={heading}><span className="landing-benefit-icon">{icon === 'rupee' ? '₹' : <CareIcon name={icon} />}</span><div><h2>{heading}</h2><p>{text}</p></div></article>)}</section>
     <section className="landing-how" aria-labelledby="landing-how-title"><p className="landing-eyebrow">How it works</p><h2 id="landing-how-title">Easy, Quick &amp; Hassle-Free</h2><ol>{steps.map(([heading, text, path], index) => <li key={heading}><span className="landing-step-number">{index + 1}</span><h3><Link to={path}>{heading}</Link></h3><p>{text}</p></li>)}</ol></section>

@@ -20,7 +20,7 @@ function makeId(prefix) {
   return prefix + "_" + crypto.randomBytes(8).toString("base64url");
 }
 
-function customerSnapshot(customer) {
+function customerSnapshot(customer, gst) {
   return {
     id: String(customer.id || ""),
     code: String(customer.code || ""),
@@ -28,9 +28,9 @@ function customerSnapshot(customer) {
     phone: String(customer.phone || ""),
     email: String(customer.email || ""),
     address: String(customer.address || ""),
-    gstin: String(customer.gstin || "").toUpperCase(),
-    gstName: String(customer.gstName || ""),
-    gstAddress: String(customer.gstAddress || "")
+    gstin: String((gst?.required ? gst.gstin : customer.gstin) || "").toUpperCase(),
+    gstName: String((gst?.required ? gst.businessName : customer.gstName) || ""),
+    gstAddress: String((gst?.required ? gst.address : customer.gstAddress) || "")
   };
 }
 
@@ -89,14 +89,14 @@ function sanitiseInvoiceLine(line, fallbackLine, itemDoc) {
   const unit = text(src.unit || (item && item.unit) || prev.unit, 20) || "pcs";
 
   return {
-    itemId: item ? String(item.id) : text(src.itemId || prev.itemId, 60),
-    itemCode: item ? String(item.code) : text(src.itemCode || prev.itemCode, 60),
+    itemId: item ? String(item.id) : text(src.itemId ?? prev.itemId, 60),
+    itemCode: item ? String(item.code) : text(src.itemCode ?? (src.itemId === "" ? "" : prev.itemCode), 60),
     name,
     unit,
     qty,
     price,
     amount: roundMoney(qty * price),
-    note: text(src.note || prev.note || (item && (item.description || item.service)), 200)
+    note: text(src.note ?? prev.note ?? (item && (item.description || item.service)), 200)
   };
 }
 

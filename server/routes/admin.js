@@ -11,7 +11,7 @@ const { pushConfig, pushStatusForUser, sendTestNotification } = require("../serv
 const { DEFAULT_SHOP } = require("../services/bootstrap");
 const { makeId, customerSnapshot, invoiceTotals, adminInvoiceToClient } = require("../services/adminUtils");
 const { requireAdmin, publicUser } = require("../middleware/auth");
-const { orderToClient } = require("../services/orderUtils");
+const { orderToClient, orderPaymentAmounts } = require("../services/orderUtils");
 const router = express.Router();
 
 const BILLING_FIELDS = ["businessName", "businessAddress", "businessEmail", "phone", "gstNumber", "businessState", "stateCode", "bankName", "accountHolder", "accountNumber", "ifsc", "upiId", "defaultInvoiceNotes", "defaultInvoiceTerms", "pickupFee"];
@@ -32,10 +32,17 @@ async function nextSequence(field) {
 }
 
 async function ensureOrderInvoice(order, actor, settings) {
+  const paid = order.paymentStatus === "paid";
+  const { paidAmount } = orderPaymentAmounts(order);
+  const paymentStatus = paid ? "paid" : paidAmount > 0 ? "partial" : "pending";
   const existing = await AdminInvoice.findOne({ sourceOrderId: order.id });
   if (existing) {
     let changed = false;
     if (!existing.orderNumber) { existing.orderNumber = "#" + order.token; changed = true; }
+    if (existing.paid !== paid || existing.paidAmount !== paidAmount || existing.paymentStatus !== paymentStatus) {
+      existing.set({ paid, paidAmount, paymentStatus });
+      changed = true;
+    }
     if (!existing.garmentCount) { existing.garmentCount = (existing.lines || []).reduce((sum, line) => sum + Number(line.qty || 0), 0); changed = true; }
     if (!existing.deliveryCharge && existing.extraChargeLabel === "Pickup & delivery" && existing.extraCharge > 0) {
       existing.deliveryCharge = existing.extraCharge;
@@ -72,11 +79,11 @@ async function ensureOrderInvoice(order, actor, settings) {
   const invoiceSeq = await nextSequence("invoiceSeq");
   return AdminInvoice.create({
     id: makeId("inv"), number: "INV-" + String(invoiceSeq).padStart(5, "0"), sourceOrderId: order.id, orderNumber: "#" + order.token,
-    customerId: customer.id, customer: customerSnapshot(customer), invoiceDate: order.createdAtMs || Date.now(), lines, ...totals,
+    customerId: customer.id, customer: customerSnapshot(customer, order.gst), invoiceDate: order.createdAtMs || Date.now(), lines, ...totals,
     garmentCount: lines.reduce((sum, line) => sum + Number(line.qty || 0), 0),
-    paid: order.paymentStatus === "paid",
-    paidAmount: order.paymentStatus === "paid" ? totals.total : order.advanceAmount || 0,
-    paymentStatus: order.paymentStatus === "paid" ? "paid" : (order.advanceAmount > 0 ? "partial" : "pending"),
+    paid,
+    paidAmount,
+    paymentStatus,
     note: [String(settings.defaultInvoiceNotes || "").trim(), "Order #" + order.token].filter(Boolean).join(" | ").slice(0, 500),
     terms: String(settings.defaultInvoiceTerms || "").slice(0, 1000), createdBy: actor._id, updatedBy: actor._id
   });
@@ -176,15 +183,32 @@ router.get("/orders/:id/invoice", requireAdmin, async (req, res, next) => {
 router.get("/orders/:id", requireAdmin, async (req, res, next) => { try { const order = await Order.findOne({ id: req.params.id }); if (!order) return res.status(404).json({ error: "not_found", message: "Order not found." }); res.json({ order: orderToClient(order) }); } catch (err) { next(err); } });
 router.patch("/orders/:id", requireAdmin, async (req, res, next) => {
   try {
-    const order = await Order.findOne({ id: req.params.id }); if (!order) return res.status(404).json({ error: "not_found", message: "Order not found." });
-    if (["pending", "processing", "completed", "cancelled"].includes(req.body.status)) order.status = req.body.status;
-    if (["pending", "verification_pending", "paid"].includes(req.body.paymentStatus)) order.paymentStatus = req.body.paymentStatus;
-    await order.save();
+    let order = await Order.findOne({ id: req.params.id }); if (!order) return res.status(404).json({ error: "not_found", message: "Order not found." });
+    if (req.body.confirmAdvance === true) {
+      const advance = order.advanceAmount;
+      if (advance > 0 && order.verifiedAdvanceAmount === 0 && order.paymentStatus !== "paid" && order.status !== "cancelled" && (order.paidVia !== "UPI" || order.paymentStatus === "verification_pending")) {
+        await Order.updateOne({ _id: order._id, verifiedAdvanceAmount: 0, paymentStatus: order.paymentStatus, status: { $ne: "cancelled" } }, {
+          $set: { verifiedAdvanceAmount: advance, paymentStatus: advance >= order.total ? "paid" : "pending" }
+        });
+        order = await Order.findById(order._id);
+      }
+    } else {
+      if (["pending", "processing", "completed", "cancelled"].includes(req.body.status)) order.status = req.body.status;
+      if (["pending", "verification_pending", "paid"].includes(req.body.paymentStatus)) {
+        if (order.paymentStatus === "paid" && req.body.paymentStatus === "pending" && order.verifiedAdvanceAmount >= order.total) {
+          order.verifiedAdvanceAmount = 0;
+        }
+        order.paymentStatus = req.body.paymentStatus;
+      }
+      await order.save();
+    }
     const paid = order.paymentStatus === "paid";
+    const { paidAmount } = orderPaymentAmounts(order);
     await AdminInvoice.updateOne({ sourceOrderId: order.id }, {
       $set: {
         paid,
-        paymentStatus: paid ? "paid" : "pending",
+        paidAmount,
+        paymentStatus: paid ? "paid" : paidAmount > 0 ? "partial" : "pending",
         updatedBy: req.user._id
       }
     });

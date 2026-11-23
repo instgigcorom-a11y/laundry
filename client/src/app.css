@@ -216,6 +216,11 @@
 .payment-status-box,
 .gst-option { display: grid; gap: .75rem; padding: 1rem; }
 .invoice-payment h3 { margin: 0; }
+.checkout-payment-form { display: grid; gap: 1rem; }
+.checkout-payment-form > .button { width: 100%; min-height: 54px; border-radius: .95rem; font-family: "Archivo", "DM Sans", sans-serif; font-weight: 800; }
+.invoice-number-row { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .75rem; }
+.invoice-number-row .button { min-height: 34px; padding: .35rem .65rem; font-size: .75rem; }
+@media print { .invoice-number-row .button { display: none !important; } }
 .payment-live { display: inline-flex; align-items: center; min-height: 30px; padding: .35rem .65rem; border-radius: 999px; font-size: .75rem; font-weight: 900; white-space: nowrap; }
 .payment-paid { background: #dff1e4; color: #20633f; }
 .payment-partial { background: #fff0c9; color: #805a00; }
