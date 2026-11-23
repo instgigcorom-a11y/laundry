@@ -13,6 +13,8 @@ const OrderSchema = new mongoose.Schema({
   readyBy: { type: String, default: "" },
   addrText: { type: String, default: "" },
   paidVia: { type: String, default: "" },
+  advanceAmount: { type: Number, default: 0, min: 0 },
+  gst: { type: mongoose.Schema.Types.Mixed, default: {} },
   deliveryAddress: { type: mongoose.Schema.Types.Mixed, default: {} },
   paymentStatus: { type: String, enum: ["pending", "verification_pending", "paid"], default: "pending", index: true },
   status: { type: String, enum: ["pending", "processing", "completed", "cancelled"], default: "pending", index: true },

@@ -9,6 +9,9 @@ const CustomerSchema = new mongoose.Schema({
   email: { type: String, trim: true, lowercase: true, maxlength: 160, default: undefined },
   address: { type: String, trim: true, maxlength: 400, default: "" },
   notes: { type: String, trim: true, maxlength: 400, default: "" },
+  gstin: { type: String, trim: true, uppercase: true, maxlength: 15, default: "" },
+  gstName: { type: String, trim: true, maxlength: 120, default: "" },
+  gstAddress: { type: String, trim: true, maxlength: 400, default: "" },
   active: { type: Boolean, default: true },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
   updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null }

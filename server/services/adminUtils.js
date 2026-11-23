@@ -27,7 +27,10 @@ function customerSnapshot(customer) {
     name: String(customer.name || ""),
     phone: String(customer.phone || ""),
     email: String(customer.email || ""),
-    address: String(customer.address || "")
+    address: String(customer.address || ""),
+    gstin: String(customer.gstin || "").toUpperCase(),
+    gstName: String(customer.gstName || ""),
+    gstAddress: String(customer.gstAddress || "")
   };
 }
 
@@ -40,7 +43,10 @@ function sanitiseCustomer(input) {
     phone: rawPhone ? S.normalisePhone(rawPhone) : undefined,
     address: text(input && input.address, 400),
     notes: text(input && input.notes, 400),
-    active: input && input.active === false ? false : true
+    active: input && input.active === false ? false : true,
+    gstin: text(input && input.gstin, 15).toUpperCase(),
+    gstName: text(input && input.gstName, 120),
+    gstAddress: text(input && input.gstAddress, 400)
   };
 }
 
@@ -120,6 +126,9 @@ function customerToClient(customer) {
     email: c.email || "",
     address: c.address || "",
     notes: c.notes || "",
+    gstin: c.gstin || "",
+    gstName: c.gstName || "",
+    gstAddress: c.gstAddress || "",
     active: c.active !== false,
     createdAt: c.createdAt ? c.createdAt.getTime() : null,
     updatedAt: c.updatedAt ? c.updatedAt.getTime() : null
@@ -174,6 +183,8 @@ function adminInvoiceToClient(invoice) {
     total: clampNumber(x.total, 0, 1e9, 0),
     garmentCount: clampNumber(x.garmentCount, 0, 1e9, 0),
     paid: !!x.paid,
+    paidAmount: clampNumber(x.paidAmount, 0, 1e9, 0),
+    paymentStatus: x.paymentStatus || (!!x.paid ? "paid" : "pending"),
     note: x.note || "",
     terms: x.terms || "",
     createdAt: x.createdAt ? x.createdAt.getTime() : null,

@@ -74,6 +74,10 @@
 .auth form + p { margin: 1.15rem 0 0; text-align: center; color: #74675f; font-size: .9rem; }
 .auth a { color: #bd351f; font-weight: 800; }
 .auth-helper { margin: -.15rem 0 1rem; text-align: right; font-size: .88rem; }
+.password-input-wrap { position: relative; display: block; }
+.password-input-wrap input { width: 100%; padding-right: 4.7rem; }
+.password-toggle { position: absolute; right: .55rem; top: 50%; transform: translateY(-50%); min-height: 34px; padding: .35rem .55rem; border: 0; border-radius: .55rem; background: #f5ede7; color: #9f3d29; font: 800 .76rem "Archivo", "DM Sans", sans-serif; cursor: pointer; }
+.password-toggle:focus-visible { outline: 3px solid rgba(236,77,46,.28); outline-offset: 2px; }
 .success { color: #1f7253; background: #e8f4ec; border-radius: .7rem; padding: .75rem .85rem; font-size: .9rem; }
 .account-password { margin: 1rem 0; }.account-password h2 { margin: 0; }.account-password > p { margin: .35rem 0 1rem; color: #74675f; }.account-password .button { width: 100%; }
 
@@ -207,6 +211,24 @@
 .admin-order-row .actions { flex-wrap: wrap; justify-content: flex-end; }.admin-order-row select { min-height: 34px; padding: .35rem .5rem; border: 1px solid #d9ccc4; border-radius: .55rem; background: #fff; font: 700 .75rem "Archivo", "DM Sans", sans-serif; text-transform: capitalize; }
 @media (max-width: 720px) { .admin-order-row .actions { width: 100%; justify-content: flex-start; }.admin-order-row .actions .button { flex: 1 1 auto; } }
 .push-ready,.push-not-ready { display: inline-flex; align-items: center; min-height: 32px; padding: 0 .55rem; border-radius: .55rem; font: 800 .68rem "Archivo", "DM Sans", sans-serif; white-space: nowrap; }.push-ready { color: #216547; background: #e5f5eb; }.push-not-ready { color: #9b3a22; background: #fff0e8; }
+
+.invoice-payment,
+.payment-status-box,
+.gst-option { display: grid; gap: .75rem; padding: 1rem; }
+.invoice-payment h3 { margin: 0; }
+.payment-live { display: inline-flex; align-items: center; min-height: 30px; padding: .35rem .65rem; border-radius: 999px; font-size: .75rem; font-weight: 900; white-space: nowrap; }
+.payment-paid { background: #dff1e4; color: #20633f; }
+.payment-partial { background: #fff0c9; color: #805a00; }
+.payment-pending { background: #fbe4de; color: #9b3d29; }
+.invoice-payment-balance { display: flex; justify-content: space-between; gap: 1rem; padding: .65rem .8rem; border-radius: .65rem; background: #f6f8f4; font-size: .84rem; }
+.gst-toggle { display: flex; align-items: center; gap: .55rem; font-weight: 850; }
+.gst-toggle input { width: 18px; height: 18px; accent-color: #1e5b47; }
+.payment-status-box .field { margin: 0; }
+.gst-option .grid { margin-top: .25rem; }
+@media (max-width: 720px) {
+  .invoice-payment-balance { flex-direction: column; }
+  .invoice-preview .title-row { align-items: flex-start; }
+}
 
 /* Interactive dashboard, customer order tracking, and direct contact actions. */
 .dashboard-metric { color: inherit; text-decoration: none; transition: transform .18s ease, box-shadow .18s ease; }

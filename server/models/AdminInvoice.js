@@ -19,6 +19,9 @@ const CustomerSnapshotSchema = new mongoose.Schema({
   phone: { type: String, default: "" },
   email: { type: String, default: "" },
   address: { type: String, default: "" }
+  ,gstin: { type: String, default: "" },
+  gstName: { type: String, default: "" },
+  gstAddress: { type: String, default: "" }
 }, { _id: false });
 
 const AdminInvoiceSchema = new mongoose.Schema({
@@ -41,6 +44,8 @@ const AdminInvoiceSchema = new mongoose.Schema({
   total: { type: Number, default: 0 },
   garmentCount: { type: Number, default: 0, min: 0 },
   paid: { type: Boolean, default: false },
+  paidAmount: { type: Number, default: 0, min: 0 },
+  paymentStatus: { type: String, enum: ["pending", "partial", "paid"], default: "pending" },
   note: { type: String, trim: true, maxlength: 500, default: "" },
   terms: { type: String, trim: true, maxlength: 1000, default: "" },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },

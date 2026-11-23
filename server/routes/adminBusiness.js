@@ -12,6 +12,7 @@ const {
   sanitiseItem,
   sanitiseInvoiceLine,
   invoiceTotals,
+  clampNumber,
   customerToClient,
   itemToClient,
   adminInvoiceToClient
@@ -110,9 +111,17 @@ async function buildAdminInvoicePayload(input, currentInvoice, shopSettings) {
     throw err;
   }
 
+  const paidAmount = Math.min(totals.total, Math.max(0, clampNumber(src.paidAmount, 0, totals.total, clampNumber(current && current.paidAmount, 0, totals.total, 0))));
+  const paid = src.paid === undefined ? paidAmount >= totals.total : !!src.paid;
+  const paymentStatus = paid ? "paid" : paidAmount > 0 ? "partial" : "pending";
+  const snapshot = customer ? customerSnapshot(customer) : (current && current.customer) || {};
+  if (src.gstin !== undefined) snapshot.gstin = String(src.gstin || "").trim().toUpperCase().slice(0, 15);
+  if (src.gstName !== undefined) snapshot.gstName = String(src.gstName || "").trim().slice(0, 120);
+  if (src.gstAddress !== undefined) snapshot.gstAddress = String(src.gstAddress || "").trim().slice(0, 400);
+
   return {
     customerId,
-    customer: customer ? customerSnapshot(customer) : (current && current.customer) || {},
+    customer: snapshot,
     invoiceDate: Number(src.invoiceDate) || (current && current.invoiceDate) || Date.now(),
     lines,
     subtotal: totals.subtotal,
@@ -125,7 +134,9 @@ async function buildAdminInvoicePayload(input, currentInvoice, shopSettings) {
     adjustment: totals.adjustment,
     total: totals.total,
     garmentCount: Math.max(0, Number(src.garmentCount) || lines.reduce((sum, line) => sum + Number(line.qty || 0), 0)),
-    paid: src.paid === undefined ? !!(current && current.paid) : !!src.paid,
+    paid,
+    paidAmount,
+    paymentStatus,
     note: String(src.note || (current && current.note) || "").trim().slice(0, 500),
     terms: String(src.terms || (current && current.terms) || "").trim().slice(0, 1000)
   };

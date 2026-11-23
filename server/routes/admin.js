@@ -74,7 +74,10 @@ async function ensureOrderInvoice(order, actor, settings) {
     id: makeId("inv"), number: "INV-" + String(invoiceSeq).padStart(5, "0"), sourceOrderId: order.id, orderNumber: "#" + order.token,
     customerId: customer.id, customer: customerSnapshot(customer), invoiceDate: order.createdAtMs || Date.now(), lines, ...totals,
     garmentCount: lines.reduce((sum, line) => sum + Number(line.qty || 0), 0),
-    paid: order.paymentStatus === "paid", note: [String(settings.defaultInvoiceNotes || "").trim(), "Order #" + order.token].filter(Boolean).join(" | ").slice(0, 500),
+    paid: order.paymentStatus === "paid",
+    paidAmount: order.paymentStatus === "paid" ? totals.total : order.advanceAmount || 0,
+    paymentStatus: order.paymentStatus === "paid" ? "paid" : (order.advanceAmount > 0 ? "partial" : "pending"),
+    note: [String(settings.defaultInvoiceNotes || "").trim(), "Order #" + order.token].filter(Boolean).join(" | ").slice(0, 500),
     terms: String(settings.defaultInvoiceTerms || "").slice(0, 1000), createdBy: actor._id, updatedBy: actor._id
   });
 }
@@ -177,7 +180,14 @@ router.patch("/orders/:id", requireAdmin, async (req, res, next) => {
     if (["pending", "processing", "completed", "cancelled"].includes(req.body.status)) order.status = req.body.status;
     if (["pending", "verification_pending", "paid"].includes(req.body.paymentStatus)) order.paymentStatus = req.body.paymentStatus;
     await order.save();
-    await AdminInvoice.updateOne({ sourceOrderId: order.id }, { $set: { paid: order.paymentStatus === "paid", updatedBy: req.user._id } });
+    const paid = order.paymentStatus === "paid";
+    await AdminInvoice.updateOne({ sourceOrderId: order.id }, {
+      $set: {
+        paid,
+        paymentStatus: paid ? "paid" : "pending",
+        updatedBy: req.user._id
+      }
+    });
     res.json({ order: orderToClient(order) });
   } catch (err) { next(err); }
 });

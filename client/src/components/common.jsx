@@ -1,10 +1,15 @@
 import * as PhoneInputPackage from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
+import { useState } from "react";
 
 const PhoneInput = PhoneInputPackage.default?.default || PhoneInputPackage.default;
 
 export function Button({ children, loading, ...props }) { return <button className="button" disabled={loading || props.disabled} {...props}>{loading ? "Please wait..." : children}</button>; }
 export function Field({ label, error, ...props }) { return <label className="field"><span>{label}</span><input {...props} />{error && <small className="error">{error}</small>}</label>; }
+export function PasswordField({ label, visibleLabel = "Show password", hiddenLabel = "Hide password", ...props }) {
+  const [visible, setVisible] = useState(false);
+  return <label className="field password-field"><span>{label}</span><div className="password-input-wrap"><input {...props} type={visible ? "text" : "password"} /><button type="button" className="password-toggle" onClick={() => setVisible((current) => !current)} aria-label={visible ? hiddenLabel : visibleLabel} aria-pressed={visible}>{visible ? "Hide" : "Show"}</button></div></label>;
+}
 export function Status({ loading, error, empty, children }) { if (loading) return <p className="state">Loading...</p>; if (error) return <p className="state error">{error}</p>; if (empty) return <p className="state">{empty}</p>; return children; }
 
 export function InternationalPhoneField({ country, value, onChange, label = "Mobile number", hint, required = false }) {

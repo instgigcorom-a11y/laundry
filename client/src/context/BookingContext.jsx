@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { AuthContext } from "./AuthContext";
 
 export const BookingContext = createContext(null);
-const blankBooking = { mode: "pickup", dateLabel: "", slot: "", readyBy: "", address: null, paidVia: "Cash" };
+const blankBooking = { mode: "pickup", dateLabel: "", slot: "", readyBy: "", address: null, paidVia: "Cash", advanceAmount: 0, gst: { required: false, gstin: "", businessName: "", address: "" } };
 
 function readBooking(key) {
   try { return key ? { ...blankBooking, ...JSON.parse(localStorage.getItem(key) || "{}") } : blankBooking; }
