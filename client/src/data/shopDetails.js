@@ -1,7 +1,7 @@
 export const SHOP_ADDRESS = "Shop no. 4, New Partap Nagar Maine, Gurlal Bazar, East Gobind Nagar, Pratap Nagar, Amritsar, Punjab 143001";
 export const SHOP_MAP_URL = "https://maps.app.goo.gl/fhX7rC6RjevR7M3Y9?g_st=aw";
 export const SHOP_INSTAGRAM_URL = "https://www.instagram.com/prem_power_laundry?stkn=Mm5weTdxY2R4NHdt";
-export const SHOP_HOURS = "8:30 AM - 10:00 PM";
+export const SHOP_HOURS = "7:00 AM - 10:00 PM";
 export const SHOP_PHONE = "+91 81460 99396";
 export const SHOP_PHONE_TEL = "+918146099396";
 export const SHOP_WHATSAPP_URL = "https://wa.me/918146099396?text=Hello%20Prem%20Power%20Laundry%2C%20I%20need%20help%20with%20laundry%20service.";
