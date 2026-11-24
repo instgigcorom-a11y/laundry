@@ -73,11 +73,25 @@ Serve built files and directory indexes first. The build creates static entry
 pages for login, booking and admin routes, plus `404.html` for missing pages.
 Only the two order-specific routes need to use the SPA shell.
 
-- On Render Static Sites, first deploy the complete build. Then, in the
-  frontend service's **Redirects/Rewrites** settings, add two **Rewrite**
-  rules targeting `/app.html`: `/confirmation/:id` and `/payment/:id`. Remove
-  the general `/*` rewrite so other missing paths return HTTP 404. Keep any
-  existing redirects for canonical public URLs.
+- **Render Static Site (the live host).** Render ignores `_redirects`. It
+  serves an existing file first, then the first matching dashboard rule from
+  the top, otherwise HTTP 404. A slashless path such as `/pricing` does not
+  count as a file, so it needs a rule. These rules were set in the `laundry`
+  static site's **Redirects/Rewrites** settings on 24 Nov 2026, in this order:
+  1. Redirect (301) the previous-site URLs listed in `src/data/redirects.js`:
+     `/guides/Clean-Shoes` → `/shoe-cleaning-amritsar/`,
+     `/laundry-for-professionals-amritsar` → `/laundry-service-amritsar/` and
+     `/laundry-pickup-amritsar` → `/areas-we-serve/`.
+  2. Redirect (301) `/products` → `/products/`, and each of the 14 top-level
+     public pages without its slash to its canonical URL (`/pricing` →
+     `/pricing/` and so on). Area pages are noindex, so their slashless
+     variants are left to the catch-all.
+  3. Rewrite `/*` → `/app.html`, last. Unknown URLs and app routes such as
+     `/login` or `/payment/:id` get the noindex app shell, and React shows the
+     right screen or "Page not found". Never point this rule at `/index.html`:
+     that serves the homepage, with a homepage canonical, for every unknown
+     URL, which Search Console reports as duplicates of the homepage.
+  When you add a public page, add its slashless redirect above the catch-all.
 - On Netlify and Cloudflare Pages, deploy the generated `_redirects` and
   `404.html` with the rest of the build.
 - On Nginx, serve existing files with `try_files $uri $uri/ =404;` and set
@@ -139,8 +153,9 @@ catalogue rather than a second price list. Guides include distinct service
 information, item preparation guidance, published rates, visible FAQs and
 contact actions. The ten topics are an editorial selection from the verified
 catalogue, without an assertion about measured keyword volumes or rankings.
-The main footer keeps the original seven navigation links. The sitemap now
-contains fifty-five URLs, including the existing `/products/` catalogue. The build
+The main footer keeps the original seven navigation links. The sitemap
+contains sixteen URLs: the fifteen indexable public pages and the `/products/`
+catalogue (area pages are excluded; see below). The build
 generates canonical redirects for every public page. `npm run verify:seo`
 checks all fifty-four initial HTML responses, exactly ten clickable tags on each,
 guide content, prices, FAQs, links, assets, sitemap and legacy route fallbacks.
@@ -160,8 +175,13 @@ road distance, travel time or new local landmark is invented.
 
 Area page data is built from the existing groups and
 `client/src/data/areaGuides.js`; the enquiry interface is in
-`client/src/components/AreaContent.jsx`. All area pages are pre-rendered and
-included in the sitemap and canonical redirects. They link back to the areas
+`client/src/components/AreaContent.jsx`. All area pages are pre-rendered with
+`noindex, follow` and are left out of the sitemap (decision of 24 Nov 2026).
+Google had not crawled any of them after a month, and sets of near-identical
+location pages risk being treated as doorway pages. Customers still reach them
+from `/areas-we-serve/`, which stays indexed and lists every area. To index an
+area page again, first give it substantial unique content, then change
+`isIndexablePage` in `client/src/data/publicPages.js`. They link back to the areas
 directory, service pages, prices, contact details and home FAQs. Other entries
 in the same approximate band are labelled as such, without assuming adjacency.
 

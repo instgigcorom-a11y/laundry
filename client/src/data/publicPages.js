@@ -23,6 +23,13 @@ export const areaGroups = [
 export const areaPages = createAreaPages(areaGroups);
 export const publicPages = [...primaryPublicPages, ...serviceGuides, ...areaPages];
 
+// Area enquiry pages stay live for customers but carry noindex and are left out
+// of the sitemap. They share most of their text, and Google treats sets of
+// near-identical location pages as doorway pages. /areas-we-serve/ (indexed)
+// still lists and links every area.
+export const isIndexablePage = page => page.kind !== 'area';
+export const indexablePublicPages = publicPages.filter(isIndexablePage);
+
 export const localBusiness = {
   '@context': 'https://schema.org', '@type': 'DryCleaningOrLaundry',
   '@id': `${SITE_URL}/#business`, name: 'Prem Power Laundry', url: `${SITE_URL}/`,

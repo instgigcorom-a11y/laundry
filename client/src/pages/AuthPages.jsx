@@ -9,7 +9,7 @@ import { parseSignupPhone } from "../utils/phone";
 function nextPath(user, location) {
   const requested = location.state?.from;
   if (requested && requested.startsWith("/") && !requested.startsWith("//")) return requested;
-  return user.role === "admin" ? "/admin" : "/products";
+  return user.role === "admin" ? "/admin" : "/products/";
 }
 
 function AuthShell({ title, children }) {

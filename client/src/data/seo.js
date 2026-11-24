@@ -1,4 +1,4 @@
-import { localBusiness, publicPages, SITE_URL } from './publicPages.js';
+import { isIndexablePage, localBusiness, publicPages, SITE_URL } from './publicPages.js';
 import { SHOP_INSTAGRAM_URL, SHOP_REVIEW_URL } from './shopDetails.js';
 
 export const SOCIAL_IMAGE = `${SITE_URL}/images/ppl-wash-social.jpg`;
@@ -63,7 +63,7 @@ export function updateRouteMetadata(path) {
   };
   document.title = metadata?.title || 'Your Account & Booking | Prem Power Laundry';
   setMeta('name', 'description', metadata?.description || 'Manage your Prem Power Laundry account and booking.');
-  setMeta('name', 'robots', metadata ? 'index, follow' : 'noindex, follow');
+  setMeta('name', 'robots', metadata && (!page || isIndexablePage(page)) ? 'index, follow' : 'noindex, follow');
   document.head.querySelectorAll('link[rel="canonical"], script[data-page-schema], meta[property^="og:"], meta[name^="twitter:"]').forEach(node => node.remove());
   if (!metadata) return;
   const canonical = document.createElement('link'); canonical.rel = 'canonical'; canonical.href = SITE_URL + metadata.path; document.head.appendChild(canonical);

@@ -1,7 +1,8 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { createServer, loadEnv } from 'vite';
-import { publicPages, SITE_URL } from '../src/data/publicPages.js';
+import { indexablePublicPages, isIndexablePage, publicPages, SITE_URL } from '../src/data/publicPages.js';
+import { catalogueRedirect, legacyRedirects } from '../src/data/redirects.js';
 import { socialMetadata, structuredData } from '../src/data/seo.js';
 import { fetchPublicRates, hasPublicRates } from '../src/data/publicRates.js';
 import { staticAppPaths, parameterizedAppPaths } from '../src/data/appPaths.js';
@@ -45,7 +46,7 @@ try {
     const html = template
       .replace(/<title>[\s\S]*?<\/title>/, `<title>${escape(page.title)}</title>`)
       .replace(/<meta name="description"[^>]*>/, `<meta name="description" content="${escape(page.description)}" />`)
-      .replace('content="noindex, follow"', 'content="index, follow"')
+      .replace('content="noindex, follow"', isIndexablePage(page) ? 'content="index, follow"' : 'content="noindex, follow"')
       .replace('</head>', `<link rel="canonical" href="${SITE_URL}${page.path}" />\n${social}\n<script type="application/ld+json" data-page-schema="true">${JSON.stringify(structuredData(page)).replaceAll('<', '\\u003c')}</script>\n</head>`)
       .replace('<div id="root"></div>', () => renderBody(page.path, initialRates) + snapshot);
     const output = resolve('dist', `.${page.path}`, 'index.html');
@@ -53,12 +54,13 @@ try {
     await writeFile(output, html);
     console.log(`Pre-rendered ${page.path}`);
   }
-  const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${[...publicPages.map(page => page.path), '/products/'].map(path => `  <url><loc>${SITE_URL}${path}</loc></url>`).join('\n')}\n</urlset>\n`;
+  const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${[...indexablePublicPages.map(page => page.path), '/products/'].map(path => `  <url><loc>${SITE_URL}${path}</loc></url>`).join('\n')}\n</urlset>\n`;
   await writeFile('dist/sitemap.xml', sitemap);
   // Keep canonical redirects in sync as new service guides are added.
   const redirects = publicPages.filter(page => page.path !== '/').map(page => `${page.path.slice(0, -1)} ${page.path} 301`);
   const rewrites = parameterizedAppPaths.map(path => `${path} /app.html 200`);
-  await writeFile('dist/_redirects', `# Canonical public URLs\n${redirects.join('\n')}\n# Order-specific app routes\n${rewrites.join('\n')}\n`);
+  const legacy = [...legacyRedirects, catalogueRedirect].map(([from, to]) => `${from} ${to} 301`);
+  await writeFile('dist/_redirects', `# Render ignores this file: mirror these rules in the Render dashboard (DEPLOYMENT.md).\n# Previous-site URLs and the catalogue\n${legacy.join('\n')}\n# Canonical public URLs\n${redirects.join('\n')}\n# Order-specific app routes\n${rewrites.join('\n')}\n`);
 } finally {
   await vite.close();
 }

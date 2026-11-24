@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { preview } from 'vite';
-import { areaGroups, areaPages, primaryPublicPages, publicPages, SITE_URL } from '../src/data/publicPages.js';
+import { areaGroups, areaPages, indexablePublicPages, isIndexablePage, primaryPublicPages, publicPages, SITE_URL } from '../src/data/publicPages.js';
+import { catalogueRedirect, legacyRedirects } from '../src/data/redirects.js';
 import { formatPublicRate } from '../src/data/publicRates.js';
 import { staticAppPaths, parameterizedAppPaths } from '../src/data/appPaths.js';
 import { serviceTags } from '../src/data/serviceGuides.js';
@@ -70,8 +71,13 @@ try {
     assert.equal(description, page.description);
     assert.ok(head.includes(`href="${SITE_URL}${page.path}"`), 'canonical missing');
     assert.equal((head.match(/rel="canonical"/g) || []).length, 1, 'duplicate canonical');
-    assert.ok(head.includes('content="index, follow"'), 'public page must stay indexable');
-    assert.ok(!head.includes('noindex'), 'public page accidentally noindex');
+    if (isIndexablePage(page)) {
+      assert.ok(head.includes('content="index, follow"'), 'public page must stay indexable');
+      assert.ok(!head.includes('noindex'), 'public page accidentally noindex');
+    } else {
+      assert.ok(head.includes('content="noindex, follow"'), `area enquiry page must stay out of the index: ${page.path}`);
+      assert.ok(!head.includes('content="index, follow"'), `area enquiry page accidentally indexable: ${page.path}`);
+    }
     const schema = JSON.parse(head.match(/<script type="application\/ld\+json"[^>]*>(.*?)<\/script>/)[1]);
     assert.equal(schema['@context'], 'https://schema.org');
     const business = schema['@graph'].find(entity => entity['@type'] === 'DryCleaningOrLaundry');
@@ -193,9 +199,20 @@ try {
   assert.equal(sitemapResponse.status, 200);
   const sitemap = await sitemapResponse.text();
   assert.ok(sitemap.includes('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'));
-  const expectedUrls = [...publicPages.map(page => SITE_URL + page.path), SITE_URL + '/products/'];
+  const expectedUrls = [...indexablePublicPages.map(page => SITE_URL + page.path), SITE_URL + '/products/'];
   const actualUrls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match => match[1]);
-  assert.deepEqual(actualUrls.sort(), expectedUrls.sort(), 'sitemap must contain all public pages and the existing catalogue exactly once');
+  assert.deepEqual(actualUrls.sort(), expectedUrls.sort(), 'sitemap must contain every indexable public page and the catalogue exactly once');
+  assert.equal(expectedUrls.length, 16);
+  assert.ok(!actualUrls.some(url => url.includes('/areas-we-serve/') && !url.endsWith('/areas-we-serve/')), 'noindex area pages must stay out of the sitemap');
+  const redirectRules = await readFile('dist/_redirects', 'utf8');
+  for (const [from, to] of [...legacyRedirects, catalogueRedirect]) {
+    const moved = await fetch(origin + from, { redirect: 'manual' });
+    assert.equal(moved.status, 301, `redirect missing for ${from}`);
+    assert.equal(moved.headers.get('location'), to);
+    assert.ok(redirectRules.includes(`${from} ${to} 301`), `_redirects missing ${from}`);
+    const target = await fetch(origin + to);
+    assert.equal(target.status, 200, `redirect target broken ${to}`);
+  }
   assert.equal(new Set(actualUrls).size, actualUrls.length);
   for (const url of actualUrls) localLinks.add(new URL(url).pathname);
   const app = await readFile('dist/app.html', 'utf8');
@@ -261,7 +278,8 @@ try {
   console.log(`PASS ${localLinks.size} local link destinations and ${localAssets.size} local assets; sitemap has exactly ${expectedUrls.length} URLs; robots.txt points to sitemap`);
   console.log('PASS 10 visible clickable service tags on all 54 public pages, 8 service guides with rates and FAQs');
   console.log(`PASS ${rates.length} published rate rows match the ordering catalogue snapshot; known app routes work and missing URLs return 404`);
-  console.log('PASS 39 linked area pages with unique enquiry tips, map origins, WhatsApp enquiries and coverage notes');
+  console.log('PASS 39 linked area pages with unique enquiry tips, map origins, WhatsApp enquiries and coverage notes; all noindex and outside the sitemap');
+  console.log(`PASS ${legacyRedirects.length + 1} permanent redirects for previous-site URLs and /products`);
   console.log('PASS 10 accessible FAQ accordions with answers in initial HTML on home, areas directory and contact');
   console.log('PASS unique metadata, 39 candidate areas, full published prices, sitemap and legacy app fallback');
 } finally {

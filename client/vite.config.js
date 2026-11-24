@@ -5,6 +5,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { publicPages } from "./src/data/publicPages.js";
 import { isParameterizedAppPath, staticAppPaths } from "./src/data/appPaths.js";
+import { catalogueRedirect, legacyRedirects } from "./src/data/redirects.js";
 
 function previewRoutes() {
 	return {
@@ -13,6 +14,12 @@ function previewRoutes() {
 			const output = resolve(server.config.root, server.config.build.outDir);
 			server.middlewares.use((request, response, next) => {
 				const url = new URL(request.url, "http://localhost");
+				// Same permanent redirects as the Render dashboard rules.
+				const moved = [...legacyRedirects, catalogueRedirect].find(([from]) => from === url.pathname);
+				if (moved) {
+					response.writeHead(301, { Location: moved[1] + url.search });
+					return response.end();
+				}
 				const page = publicPages.find(page => page.path !== "/" && page.path.slice(0, -1) === url.pathname);
 				if (page) {
 					response.writeHead(301, { Location: page.path + url.search });

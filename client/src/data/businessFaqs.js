@@ -11,7 +11,7 @@ export const businessFaqs = [
   {
     question: 'Which laundry and dry cleaning services does Prem Power Laundry offer in Amritsar?',
     answer: 'The published catalogue includes wash & fold, wash & press, dry cleaning, press only and garment-wise steam pressing. It also lists household items, shoes and bags. Check the specific item and service before booking, and contact the shop if you cannot find a match.',
-    path: '/products', link: 'Browse the live service catalogue',
+    path: '/products/', link: 'Browse the live service catalogue',
   },
   {
     question: 'Where is Prem Power Laundry, and can I bring my clothes to the shop?',
@@ -31,7 +31,7 @@ export const businessFaqs = [
   {
     question: 'How can I book laundry online with Prem Power Laundry?',
     answer: 'Open the live service catalogue, log in or register, choose the relevant items and add them to your bag. Continue through the booking steps to select shop drop-off or arrange collection. Confirm pickup coverage with the shop first, and use the Orders page after booking to follow your order.',
-    path: '/products', link: 'Start an online order',
+    path: '/products/', link: 'Start an online order',
   },
   {
     question: 'Does Prem Power Laundry offer same-day or next-day cleaning?',

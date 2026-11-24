@@ -21,13 +21,13 @@ function CareIcon({ name, ...props }) {
   return <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>{paths[name]}</svg>;
 }
 
-const navItems = [['/', 'Home'], ['/products', 'Services'], ['/pricing/', 'Price List'], ['/about/', 'About'], ['/contact/', 'Contact']];
+const navItems = [['/', 'Home'], ['/products/', 'Services'], ['/pricing/', 'Price List'], ['/about/', 'About'], ['/contact/', 'Contact']];
 
 export function HomeHeader({ user, itemCount, onLogout }) {
   return <header className="landing-header">
     <Link to="/" className="landing-brand" aria-label="Prem Power Laundry home"><img src="/prem-power-laundry-logo.svg" width="188" height="56" alt="Prem Power Laundry" /></Link>
     <nav className="landing-desktop-links" aria-label="Primary navigation">{navItems.map(([path, label]) => <Link key={path} to={path} aria-current={path === '/' ? 'page' : undefined}>{label}</Link>)}</nav>
-    <Link className="landing-login" to={user ? '/products' : '/login'}><CareIcon name="user" /><span>{user ? 'Place an Order' : 'Log in / Place an Order'}</span></Link>
+    <Link className="landing-login" to={user ? '/products/' : '/login'}><CareIcon name="user" /><span>{user ? 'Place an Order' : 'Log in / Place an Order'}</span></Link>
     <details className="landing-mobile-menu"><summary>Menu <span aria-hidden="true">☰</span></summary><nav aria-label="More navigation">{navItems.map(([path, label]) => <Link key={path} to={path} onClick={event => event.currentTarget.closest('details')?.removeAttribute('open')}>{label}</Link>)}<Link to="/areas-we-serve/">Areas we serve</Link>{user && <><Link to="/cart">Your bag ({itemCount})</Link><Link to="/orders">Your orders</Link><Link to="/account">Your account</Link><button onClick={onLogout}>Log out</button></>}</nav></details>
   </header>;
 }
@@ -39,7 +39,7 @@ const benefits = [
   ['rupee', 'Clear Prices', 'Published rates before you book'],
 ];
 const steps = [
-  ['Bring / Place Order', 'Visit our shop or place an order online', '/products'],
+  ['Bring / Place Order', 'Visit our shop or place an order online', '/products/'],
   ['Choose Your Care', 'Match each item to its cleaning or pressing service', '/pricing/'],
   ['Confirm Arrangements', 'Check collection coverage and your return date', '/contact/'],
   ['Collect / Get Delivered', 'Follow your order and confirm handover with the shop', '/orders'],

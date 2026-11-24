@@ -63,7 +63,7 @@ export function PublicContentPage({ page, rates }) {
       <h2>Questions about {page.label.toLowerCase()}</h2>
       <div className="service-faq">{page.questions.map(([question, answer]) => <article key={question}><h3>{question}</h3><p>{answer}</p></article>)}</div>
       <article className="card"><h2>Visit Prem Power Laundry in Amritsar</h2><p>{SHOP_ADDRESS}</p><p><Link to="/contact/">Shop contact and directions</Link>. Share your full address to confirm pickup coverage; our <Link to="/areas-we-serve/">nearby area guide</Link> does not guarantee collection at every address.</p><Actions page={page} /></article>
-      <p><Link to={page.related}>{page.relatedLabel}</Link>, <Link data-conversion="pricing" to={`/pricing/#${rateAnchor}`}>view {page.label.toLowerCase()} prices</Link> or <Link to="/products">choose items in the live booking catalogue</Link>.</p>
+      <p><Link to={page.related}>{page.relatedLabel}</Link>, <Link data-conversion="pricing" to={`/pricing/#${rateAnchor}`}>view {page.label.toLowerCase()} prices</Link> or <Link to="/products/">choose items in the live booking catalogue</Link>.</p>
     </>}
     {path === '/laundry-service-amritsar/' && <>
       <p>For everyday laundry in Amritsar, our published catalogue includes wash &amp; fold and wash &amp; press by weight. Choose the service based on whether you need pressing included.</p>
@@ -73,7 +73,7 @@ export function PublicContentPage({ page, rates }) {
       <h2>How to arrange laundry</h2><ol><li>Choose wash &amp; fold or wash &amp; press and share the approximate weight.</li><li>Send your address on WhatsApp to confirm collection availability and any charges, or arrange shop drop-off.</li><li>Confirm the order total and return date with the shop before handover.</li></ol>
       <h2>Laundry questions</h2><div className="service-faq"><article><h3>Is pressing included?</h3><p>Wash &amp; press includes pressing. Choose wash &amp; fold when you need washing and folding, or <Link to="/steam-press-amritsar/">pressing only</Link> for clothes that are already clean.</p></article><article><h3>How much does laundry cost?</h3><p>Check <Link data-conversion="pricing" to="/pricing/#everyday">laundry prices</Link> and confirm the current total, collection charges and return date before booking.</p></article></div>
       <p>Check <Link to="/areas-we-serve/">nearby areas</Link> and confirm pickup for your full address. You can also bring your clothes to our shop in Gurlal Bazar.</p>
-      <Actions page={page} /><p>Need item-wise care? See <Link to="/dry-cleaning-amritsar/">dry cleaning</Link>, <Link to="/pricing/">all published rates</Link> or <Link to="/products">book from the live catalogue</Link>.</p>
+      <Actions page={page} /><p>Need item-wise care? See <Link to="/dry-cleaning-amritsar/">dry cleaning</Link>, <Link to="/pricing/">all published rates</Link> or <Link to="/products/">book from the live catalogue</Link>.</p>
     </>}
     {path === '/dry-cleaning-amritsar/' && <>
       <p>Our Amritsar rate card lists dry cleaning for men’s wear, women’s wear, winter wear, household items, shoes and bags. Find the specific item before choosing a service.</p>
@@ -84,7 +84,7 @@ export function PublicContentPage({ page, rates }) {
       <p>Send your full address to confirm pickup availability. Our <Link to="/areas-we-serve/">Amritsar area guide</Link> helps you prepare an enquiry.</p>
       <h2>Dry cleaning questions</h2><div className="service-faq"><article><h3>Are all garments the same price?</h3><p>No. The rate card separates garment types, sets and household items. Check <Link data-conversion="pricing" to="/pricing/#men">garment dry cleaning prices</Link>; entries marked From need a confirmed quote.</p></article><article><h3>Can I book an urgent return?</h3><p>Share the date you need the items before booking. Ask the shop to confirm availability and a return date for your particular order.</p></article></div>
       <p>The catalogue also lists steam pressing for selected garments. Review <Link to="/pricing/">the full rate card</Link> to compare the available options for each item.</p>
-      <Actions page={page} /><p><Link to="/contact/">Visit our Gurlal Bazar shop</Link> or confirm pickup availability before <Link to="/products">placing an online order</Link>.</p>
+      <Actions page={page} /><p><Link to="/contact/">Visit our Gurlal Bazar shop</Link> or confirm pickup availability before <Link to="/products/">placing an online order</Link>.</p>
     </>}
     {path === '/areas-we-serve/' && <>
       <p>These 39 nearby Amritsar areas are grouped by approximate distance from our shop to mapped area points. The bands are a guide, rather than exact travel distances to individual addresses.</p>
@@ -111,7 +111,7 @@ export function PublicContentPage({ page, rates }) {
       <article className="shop-card"><div><p className="eyebrow">Visit our shop</p><h2>Prem Power Laundry</h2><address>{SHOP_ADDRESS}</address><p>Open daily: {SHOP_HOURS}</p><p><a href={`tel:${SHOP_PHONE_TEL}`}>{SHOP_PHONE}</a></p></div><a href={SHOP_MAP_URL} target="_blank" rel="noreferrer">Get directions</a></article>
       <Actions page={page} /><h2>Help us answer your enquiry</h2><p>Include the service you need, the garment or item type and the quantity or approximate laundry weight. For collection, include your area and landmark. For an existing order, have your order number ready.</p>
       <h2>Planning a visit</h2><p>Call or WhatsApp to confirm opening hours and arrangements before travelling. Use the directions link to locate the shop in Gurlal Bazar.</p>
-      <p>See <Link to="/pricing/">pricing</Link> or <Link to="/products">the live catalogue</Link> before booking.</p>
+      <p>See <Link to="/pricing/">pricing</Link> or <Link to="/products/">the live catalogue</Link> before booking.</p>
     </>}
     {['/', '/areas-we-serve/', '/contact/'].includes(path) && <BusinessFaqs />}
   </section>;

@@ -33,7 +33,7 @@ export function Layout({ children }) {
   const admin = user?.role === "admin";
   const path = location.pathname;
   const bookingBack = {
-    "/cart": "/products", "/schedule": "/cart", "/addresses": "/schedule",
+    "/cart": "/products/", "/schedule": "/cart", "/addresses": "/schedule",
     "/addresses/new": "/addresses", "/payment-method": booking.mode === "drop" ? "/cart" : "/addresses"
   }[path];
   const bagActive = ["/cart", "/schedule", "/addresses", "/addresses/new", "/payment-method"].includes(path);
@@ -44,7 +44,7 @@ export function Layout({ children }) {
     {path === '/' && !admin ? <HomeHeader user={user} itemCount={items.reduce((sum, item) => sum + item.quantity, 0)} onLogout={leave} /> : <header>
       <Link to={admin ? "/admin" : "/"} className="brand" aria-label="Prem Power Laundry home"><img className="brand-logo" src="/prem-power-laundry-logo.svg" alt="Prem Power Laundry" /></Link>
       <nav className="desktop-nav" aria-label="Primary navigation">
-        {admin ? <><Link to="/admin">Dashboard</Link><Link to="/admin/orders">Orders</Link><Link to="/admin/customers">Parties</Link><Link to="/admin/invoices">Invoices</Link><Link to="/admin/services">Services</Link><Link to="/admin/settings">Settings</Link><Suspense fallback={null}><AdminOrderNotifier /></Suspense></> : user ? <><Link to="/products">Services</Link><Link to="/cart">Cart ({items.length})</Link><Link to="/orders">Orders</Link></> : <><Link to="/products">Services</Link><Link to="/login">Log in</Link></>}
+        {admin ? <><Link to="/admin">Dashboard</Link><Link to="/admin/orders">Orders</Link><Link to="/admin/customers">Parties</Link><Link to="/admin/invoices">Invoices</Link><Link to="/admin/services">Services</Link><Link to="/admin/settings">Settings</Link><Suspense fallback={null}><AdminOrderNotifier /></Suspense></> : user ? <><Link to="/products/">Services</Link><Link to="/cart">Cart ({items.length})</Link><Link to="/orders">Orders</Link></> : <><Link to="/products/">Services</Link><Link to="/login">Log in</Link></>}
         {user && <><GoogleTranslate /><button onClick={leave}>Logout</button></>}
       </nav>
     </header>}
@@ -74,7 +74,7 @@ export function Layout({ children }) {
     {!admin && <a className={`whatsapp-float ${user ? "with-mobile-nav" : ""}`} data-conversion="whatsapp" href={SHOP_WHATSAPP_URL} target="_blank" rel="noreferrer" aria-label={`Chat with Prem Power Laundry on WhatsApp at ${SHOP_PHONE}`}><img src="/whatsapp-icon.webp" width="38" height="38" alt="" aria-hidden="true" /><b>Chat</b></a>}
     {user && !admin && <nav className="mobile-nav" aria-label="Mobile navigation">
       <MobileLink to="/" label="Home" marker="H" active={path === "/"} />
-      <MobileLink to="/products" label="Rates" marker="R" active={path.startsWith("/products")} />
+      <MobileLink to="/products/" label="Rates" marker="R" active={path.startsWith("/products")} />
       <MobileLink to="/cart" label="Bag" marker="B" badge={items.length || null} active={bagActive} />
       <MobileLink to="/orders" label="Orders" marker="O" active={path.startsWith("/orders") || path.startsWith("/confirmation") || path.startsWith("/payment/")} />
       <MobileLink to="/account" label="Account" marker="A" active={path.startsWith("/account")} />
