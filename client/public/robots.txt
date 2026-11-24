@@ -1,11 +1,6 @@
 User-agent: *
 Allow: /
-Disallow: /admin
-Disallow: /account
-Disallow: /cart
-Disallow: /orders
-Disallow: /addresses
-Disallow: /schedule
-Disallow: /payment
-Disallow: /confirmation
+# Account, booking and admin pages are deliberately not blocked here. They
+# carry a noindex tag, and search engines must be able to fetch a page to see
+# it; a Disallow kept /orders listed in Bing as "indexed but blocked".
 Sitemap: https://pplwash.in/sitemap.xml

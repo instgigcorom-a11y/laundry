@@ -71,7 +71,7 @@ export function Layout({ children }) {
         {primaryPublicPages.map(page => <Link key={page.path} to={page.path} aria-current={path.replace(/\/+$/, "") === page.path.replace(/\/+$/, "") ? "page" : undefined}>{page.label}</Link>)}
       </nav>
     </footer>}
-    {!admin && <a className={`whatsapp-float ${user ? "with-mobile-nav" : ""}`} data-conversion="whatsapp" href={SHOP_WHATSAPP_URL} target="_blank" rel="noreferrer" aria-label={`Chat with Prem Power Laundry on WhatsApp at ${SHOP_PHONE}`}><img src="/whatsapp-icon.webp" width="38" height="38" alt="" aria-hidden="true" /><b>Chat</b></a>}
+    {!admin && <a className={`whatsapp-float ${user ? "with-mobile-nav" : ""}`} data-conversion="whatsapp" href={SHOP_WHATSAPP_URL} target="_blank" rel="noreferrer" aria-label={`Chat with Prem Power Laundry on WhatsApp at ${SHOP_PHONE}`}><img src="/whatsapp-icon.webp" width="38" height="38" alt="WhatsApp" aria-hidden="true" /><b>Chat</b></a>}
     {user && !admin && <nav className="mobile-nav" aria-label="Mobile navigation">
       <MobileLink to="/" label="Home" marker="H" active={path === "/"} />
       <MobileLink to="/products/" label="Rates" marker="R" active={path.startsWith("/products")} />
